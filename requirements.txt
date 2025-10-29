@@ -1,7 +1,16 @@
+<<<<<<< HEAD
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 requests==2.31.0
 python-multipart==0.0.6
 pydantic==2.4.2  # Versión más estable
 google-generativeai==0.5.0
+=======
+fastapi==0.104.1
+uvicorn==0.24.0
+requests==2.31.0
+python-multipart==0.0.6
+pydantic==2.5.0
+google-generativeai==0.5.0
+>>>>>>> e209f8e3bf0d204fd563a8bebfdda3a5c1d5cbc5
 python-dotenv==1.0.0
