@@ -14,7 +14,6 @@ from fastapi.openapi.utils import get_openapi
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
-from gemini.client import call_gemini_with_rotation
 from config import API_KEYS, ENDPOINT, WORKING_MODEL as MODEL
 
 
@@ -44,7 +43,8 @@ print(f"   GEMINI_KEYS: {os.getenv('GEMINI_KEYS', 'NO DEFINIDA')}")
 
 
 
-def call_gemini_with_rotation(prompt: str) -> str:
+def call_gemini_with_rotation (prompt: str) -> str:
+    import google.generativeai as genai  # 🔥 AGREGAR ESTA IMPORTACIÓN
     
     print(f"🎯 INICIANDO ROTACIÓN DE CLAVES")
     print(f"🔧 Modelo configurado: {MODEL}")
