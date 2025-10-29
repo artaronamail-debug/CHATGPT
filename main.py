@@ -14,13 +14,33 @@ from fastapi.openapi.utils import get_openapi
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
-from config import API_KEYS, ENDPOINT, MODEL  # ✅ UNA SOLA IMPORTACIÓN
 from gemini.client import call_gemini_with_rotation
+from config import API_KEYS, ENDPOINT, WORKING_MODEL as MODEL
 
 
 # Después de las importaciones, agrega:
 print(f"🔍 API Keys cargadas: {API_KEYS}")
 print(f"🔍 Endpoint: {ENDPOINT}")
+
+# Al inicio, después de las importaciones
+print("🔍 TODAS LAS VARIABLES DE ENTORNO:")
+for key, value in os.environ.items():
+    if "GEMINI" in key or "API" in key:
+        print(f"   {key}: {value}")
+
+
+
+# 🔥 AGREGAR ESTO TEMPORALMENTE:
+print("🔍 TODAS LAS VARIABLES DE ENTORNO RELACIONADAS:")
+for key, value in os.environ.items():
+    if "GEMINI" in key.upper() or "API" in key.upper() or "KEY" in key.upper():
+        print(f"   {key}: {value[:20]}...")  # Mostrar solo primeros 20 chars
+
+print("🔍 VARIABLE GEMINI_API_KEYS específica:")
+print(f"   GEMINI_API_KEYS: {os.getenv('GEMINI_API_KEYS', 'NO DEFINIDA')}")
+
+print("🔍 VARIABLE GEMINI_KEYS específica:")
+print(f"   GEMINI_KEYS: {os.getenv('GEMINI_KEYS', 'NO DEFINIDA')}")
 
 
 
