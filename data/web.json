@@ -1,0 +1,6 @@
+[
+  {"neighborhood": "Palermo", "tipo": "departamento", "operacion": "alquiler"},
+  {"neighborhood": "Recoleta", "tipo": "casa", "operacion": "venta"},
+  {"neighborhood": "Belgrano", "tipo": "ph", "operacion": "alquiler"},
+  {"neighborhood": "Caballito", "tipo": "casa", "operacion": "venta"}
+]
