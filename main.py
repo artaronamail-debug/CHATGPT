@@ -34,17 +34,37 @@ def call_gemini_with_rotation(prompt: str) -> str:
         print(f"Probando clave: {key[:10]}...")
         
         try:
-            # ... código existente ...
+            # 🔥 CÓDIGO COMPLETO AQUÍ (IDENTADO):
+            genai.configure(api_key=key.strip())
+            model = genai.GenerativeModel(MODEL)
             
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.7,
+                    top_p=0.8,
+                    top_k=40,
+                )
+            )
+            
+            if not response.parts:
+                raise Exception("Respuesta vacía de Gemini")
+            
+            answer = response.text.strip()
+            print(f"✅ Respuesta exitosa")
+            print(f"💬 Respuesta: {answer}")
+            
+            return answer
+
         except Exception as e:
             print(f"❌ ERROR DETALLADO con clave {i+1}:")
             print(f"❌ Tipo: {type(e).__name__}")
             print(f"❌ Mensaje: {str(e)}")
-            # Agrega esto para más detalles:
             import traceback
             traceback.print_exc()
             continue
-
+    
+    return "❌ Todas las claves están agotadas o no autorizadas. Verificá la configuración."
 
 
 
