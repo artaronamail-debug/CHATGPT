@@ -2,7 +2,8 @@
 
 WORKDIR /app
 
-# Pasar la variable de entorno al contenedor
+# 🔥 CAMBIA ESTO:
+ARG GEMINI_API_KEYS
 ENV GEMINI_API_KEYS=$GEMINI_API_KEYS
 
 COPY requirements.txt .
