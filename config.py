@@ -16,7 +16,7 @@ except:
     print("ℹ️  Usando variables de entorno del sistema")
 
 # Leer GEMINI_KEYS de variables de entorno
-raw_keys = os.getenv("GEMINI_KEYS", "")
+raw_keys = os.getenv("GEMINI_API_KEYS", "")  # 🔥 CAMBIAR NOMBRE
 print("🧪 Variable cruda:", raw_keys[:50] + "..." if len(raw_keys) > 50 else raw_keys)
 
 API_KEYS = [key.strip() for key in raw_keys.split(",") if key.strip()]
