@@ -17,6 +17,10 @@ from pydantic import BaseModel, Field
 from config import API_KEYS, ENDPOINT
 from gemini.client import call_gemini_with_rotation
 
+# Después de las importaciones, agrega:
+print(f"🔍 API Keys cargadas: {API_KEYS}")
+print(f"🔍 Endpoint: {ENDPOINT}")
+
 def diagnosticar_problemas():
     """Función de diagnóstico"""
     print("🔍 INICIANDO DIAGNÓSTICO...")
