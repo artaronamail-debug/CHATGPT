@@ -14,14 +14,18 @@ from fastapi.openapi.utils import get_openapi
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
-from config import API_KEYS, ENDPOINT
+from config import API_KEYS, ENDPOINT, MODEL  # ✅ UNA SOLA IMPORTACIÓN
 from gemini.client import call_gemini_with_rotation
+
 
 # Después de las importaciones, agrega:
 print(f"🔍 API Keys cargadas: {API_KEYS}")
 print(f"🔍 Endpoint: {ENDPOINT}")
 
+
+
 def call_gemini_with_rotation(prompt: str) -> str:
+    
     print(f"🎯 INICIANDO ROTACIÓN DE CLAVES")
     print(f"🔧 Modelo configurado: {MODEL}")
     print(f"🔑 Claves disponibles: {len(API_KEYS)}")
@@ -34,7 +38,6 @@ def call_gemini_with_rotation(prompt: str) -> str:
         print(f"Probando clave: {key[:10]}...")
         
         try:
-            # 🔥 CÓDIGO COMPLETO AQUÍ (IDENTADO):
             genai.configure(api_key=key.strip())
             model = genai.GenerativeModel(MODEL)
             
