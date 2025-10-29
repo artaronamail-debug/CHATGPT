@@ -21,6 +21,34 @@ from gemini.client import call_gemini_with_rotation
 print(f"🔍 API Keys cargadas: {API_KEYS}")
 print(f"🔍 Endpoint: {ENDPOINT}")
 
+def call_gemini_with_rotation(prompt: str) -> str:
+    print(f"🎯 INICIANDO ROTACIÓN DE CLAVES")
+    print(f"🔧 Modelo configurado: {MODEL}")
+    print(f"🔑 Claves disponibles: {len(API_KEYS)}")
+    
+    for i, key in enumerate(API_KEYS):
+        if not key.strip():
+            continue
+            
+        print(f"============================================================")
+        print(f"Probando clave: {key[:10]}...")
+        
+        try:
+            # ... código existente ...
+            
+        except Exception as e:
+            print(f"❌ ERROR DETALLADO con clave {i+1}:")
+            print(f"❌ Tipo: {type(e).__name__}")
+            print(f"❌ Mensaje: {str(e)}")
+            # Agrega esto para más detalles:
+            import traceback
+            traceback.print_exc()
+            continue
+
+
+
+
+
 def diagnosticar_problemas():
     """Función de diagnóstico"""
     print("🔍 INICIANDO DIAGNÓSTICO...")
