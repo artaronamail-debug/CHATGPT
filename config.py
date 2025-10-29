@@ -25,6 +25,7 @@ print(f"🔧 Claves cargadas: {[key[:8] + '...' for key in API_KEYS]}")
 # Configuración del modelo y endpoint
 WORKING_MODEL = "gemini-2.0-flash-001"
 ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{WORKING_MODEL}:generateContent"
+MODEL = WORKING_MODEL
 
 print(f"🔧 Modelo configurado: {WORKING_MODEL}")
 print(f"🔧 Endpoint: {ENDPOINT}")
