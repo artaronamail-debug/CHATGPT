@@ -582,11 +582,12 @@
                 return false;
             }
             
+            // 👇 CORREGIR: usar 'mensaje' no 'msg'
             const mensajeLower = mensaje.toLowerCase().trim();
             
-            // Palabras clave más amplias para seguimiento
             const palabrasSeguimiento = [
-                'más', 'mas', 'detalles', 'características', 'caracteristicas', 'información', 'informacion',
+                'más', 'mas', 'detalles', 'brindar', 'brindame',
+                'características', 'caracteristicas', 'información', 'informacion',
                 'precio', 'ubicación', 'ubicacion', 'contacto', 'fotos', 'imágenes', 'imagenes',
                 'este', 'esta', 'ese', 'esa', 'este', 'esta',
                 'primero', 'primera', 'segundo', 'segunda', 'tercero', 'tercera',
@@ -598,6 +599,7 @@
             // Patrones más flexibles para seguimiento
             const patronesSeguimiento = [
                 /(más|mas)\s+(información|informacion|detalles|data|info)/i,
+                /(brindar|brindame|proporcionar|proporcioname)\s+(más|mas|detalles|información|informacion)/i,
                 /(dime|cuéntame|cuentame|háblame|hablame|decime)\s+(más|mas|algo)/i,
                 /(el|la)\s+(primero|primera|segundo|segunda|tercero|tercera)/i,
                 /(este|esta|ese|esa)\s+(propiedad|departamento|casa|ph|terreno|inmueble)/i,
@@ -620,22 +622,15 @@
             // También considerar mensajes muy cortos después de una búsqueda
             const esMensajeCorto = mensajeLower.split(' ').length <= 5;
             
-            const esSeguimiento = esPreguntaSeguimiento(msg);
-
-            // 👇 AGREGAR LOGS CRÍTICOS COMPLETOS
-            console.log('🔍 DEBUG COMPLETO DEL ENVÍO:', {
-                mensaje: msg,
-                esSeguimiento: esSeguimiento,
-                contextoResultados: contextoActual.resultados ? contextoActual.resultados.length : 0,
-                contextoPropiedadFocus: contextoActual.propiedad_focus,
-                contextoCompleto: contextoActual,
-                payloadCompleto: {
-                    message: msg,
-                    channel: 'web',
-                    filters: filtrosSeleccionados,
-                    contexto_anterior: contextoActual,
-                    es_seguimiento: esSeguimiento
-                }
+            const esSeguimiento = tienePalabraClave || tienePatron || esMensajeCorto;
+            
+            console.log('🔍 Análisis de seguimiento:', {
+                mensaje: mensajeLower,
+                tienePalabraClave,
+                tienePatron, 
+                esMensajeCorto,
+                esSeguimiento,
+                contexto: contextoActual.resultados.length
             });
             
             return esSeguimiento;
