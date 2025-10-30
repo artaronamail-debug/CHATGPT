@@ -622,14 +622,10 @@
             
             const esSeguimiento = tienePalabraClave || tienePatron || esMensajeCorto;
             
-            console.log('🔍 Análisis de seguimiento:', {
-                mensaje: mensajeLower,
-                tienePalabraClave,
-                tienePatron, 
-                esMensajeCorto,
-                esSeguimiento,
-                contexto: contextoActual.resultados.length
-            });
+            console.log('DETECCION SEGUIMIENTO - mensaje:', msg);
+            console.log('DETECCION SEGUIMIENTO - esSeguimiento:', esSeguimiento);
+            console.log('DETECCION SEGUIMIENTO - contextoResultados:', contextoActual.resultados ? contextoActual.resultados.length : 0);
+            console.log('DETECCION SEGUIMIENTO - contextoPropiedadFocus:', contextoActual.propiedad_focus);
             
             return esSeguimiento;
         }
