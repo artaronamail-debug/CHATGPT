@@ -820,6 +820,34 @@ async def chat(request: ChatRequest):
         filters, results = {}, None
         search_performed = False
         property_details = None
+
+        # 👇 AGREGAR DETECCIÓN MEJORADA DE SEGUIMIENTO
+        palabras_seguimiento_backend = [
+            'más', 'mas', 'detalles', 'brindar', 'brindame', 'dime', 'cuéntame', 
+            'cuentame', 'información', 'informacion', 'características', 'caracteristicas',
+            'este', 'esta', 'ese', 'esa', 'primero', 'primera', 'segundo', 'segunda',
+            'propiedad', 'departamento', 'casa', 'ph'
+        ]
+
+        es_seguimiento_backend = any(palabra in text_lower for palabra in palabras_seguimiento_backend)
+
+        # COMBINAR: seguimiento del frontend + detección backend
+        es_seguimiento_final = es_seguimiento or es_seguimiento_backend
+
+        print(f"🔍 CONTEXTO - Es seguimiento frontend: {es_seguimiento}")
+        print(f"🔍 CONTEXTO - Es seguimiento backend: {es_seguimiento_backend}")
+        print(f"🔍 CONTEXTO - Es seguimiento FINAL: {es_seguimiento_final}")
+
+        if contexto_anterior:
+            print(f"📋 Contexto anterior recibido: {len(contexto_anterior.get('resultados', []))} propiedades")
+            if contexto_anterior.get('resultados'):
+                primera_propiedad = contexto_anterior['resultados'][0]
+                print(f"🏠 Propiedad en contexto: {primera_propiedad.get('title', 'N/A')} - ${primera_propiedad.get('price', 'N/A')}")
+                
+                
+        
+        
+        
         
         # 👇 DETECCIÓN MEJORADA DE SEGUIMIENTO (usa contexto o historial)
         
@@ -866,14 +894,25 @@ async def chat(request: ChatRequest):
             print(f"🎯 Filtros detectados del texto: {detected_filters}")
 
         # Si hay filtros, realizar búsqueda
-        if filters and not property_details:
+        
+# 👇 EVITAR BÚSQUEDA SI HAY CONTEXTO DE SEGUIMIENTO
+        if filters and not property_details and not (es_seguimiento_final and contexto_anterior):
             print("🎯 Activando búsqueda con filtros combinados...")
             search_performed = True
             metrics.increment_searches()
             
             results = query_properties(filters)
             print(f"📊 Resultados encontrados: {len(results)}")
-
+        else:
+            print("🔄 Modo seguimiento - usando contexto anterior")
+            # Usar el contexto anterior si está disponible
+            if contexto_anterior and contexto_anterior.get('resultados'):
+                results = contexto_anterior['resultados']
+                print(f"📋 Usando {len(results)} propiedades del contexto anterior")
+                search_performed = True
+        
+        
+        
         # Tono según canal
         if channel == "whatsapp":
             style_hint = "Respondé de forma breve, directa y cálida como si fuera un mensaje de WhatsApp."
