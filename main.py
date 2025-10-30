@@ -139,9 +139,11 @@ class ChatRequest(BaseModel):
     filters: Optional[Dict[str, Any]] = Field(default=None, description="Filtros aplicados desde el frontend")
 
 class ChatResponse(BaseModel):
-    response: str = Field(..., description="Respuesta del asistente")
-    results_count: Optional[int] = Field(None, description="Número de propiedades encontradas")
-    search_performed: bool = Field(..., description="Indica si se realizó una búsqueda")
+    response: str
+    results_count: Optional[int] = None
+    search_performed: bool
+    # 👇 AGREGAR ESTE CAMPO NUEVO
+    propiedades: Optional[List[dict]] = None
 
 class PropertyResponse(BaseModel):
     id: int
@@ -781,12 +783,23 @@ async def chat(request: ChatRequest):
         channel = request.channel.strip()
         filters_from_frontend = request.filters if request.filters else {}
 
+        # 👇 AGREGAR DETECCIÓN DE CONTEXTO
+        contexto_anterior = request.contexto_anterior if hasattr(request, 'contexto_anterior') else None
+        es_seguimiento = request.es_seguimiento if hasattr(request, 'es_seguimiento') else False
+
         if not user_text:
             raise HTTPException(status_code=400, detail="El mensaje no puede estar vacío")
 
         print(f"📥 Mensaje recibido: {user_text}")
         print(f"📱 Canal: {channel}")
         print(f"🎯 Filtros del frontend: {filters_from_frontend}")
+        # 👇 AGREGAR LOGS DE CONTEXTO
+        print(f"🔍 CONTEXTO - Es seguimiento: {es_seguimiento}")
+        if contexto_anterior:
+            print(f"📋 Contexto anterior: {len(contexto_anterior.get('resultados', []))} propiedades")
+            if contexto_anterior.get('resultados'):
+                primera_propiedad = contexto_anterior['resultados'][0]
+                print(f"🏠 Propiedad en contexto: {primera_propiedad.get('title', 'N/A')} - ${primera_propiedad.get('price', 'N/A')}")
 
         # Cargar datos de propiedades desde JSON
         propiedades_json = cargar_propiedades_json("properties.json")
@@ -807,9 +820,20 @@ async def chat(request: ChatRequest):
         filters, results = {}, None
         search_performed = False
         property_details = None
-
-        # Check if user is asking for more details
-        if any(keyword in text_lower for keyword in ["caracteristicas", "detalles", "mas informacion", "más información"]):
+        
+        # 👇 DETECCIÓN MEJORADA DE SEGUIMIENTO (usa contexto o historial)
+        
+        # PRIORIDAD 1: Usar contexto del frontend si está disponible
+        if es_seguimiento and contexto_anterior and contexto_anterior.get('resultados'):
+            print("🎯 Usando contexto del frontend para seguimiento")
+            propiedades_contexto = contexto_anterior['resultados']
+            if propiedades_contexto:
+                property_details = propiedades_contexto[0]  # Tomar la primera propiedad
+                print(f"🏠 Propiedad desde contexto: {property_details.get('title', 'N/A')}")
+        
+        # PRIORIDAD 2: Si no hay contexto, usar detección por palabras clave
+        elif any(keyword in text_lower for keyword in ["caracteristicas", "detalles", "mas informacion", "más información", "más detalles", "mas detalles", "brindar", "dime más", "cuéntame más"]):
+            print("🔍 Detectado seguimiento por palabras clave")
             # Try to find the property from the conversation history
             if historial:
                 last_bot_response = get_last_bot_response(channel)
@@ -869,7 +893,9 @@ async def chat(request: ChatRequest):
         return ChatResponse(
             response=answer,
             results_count=len(results) if results else None,
-            search_performed=search_performed
+            search_performed=search_performed,
+            # 👇 AGREGAR PROPIEDADES A LA RESPUESTA
+            propiedades=results if results else (contexto_anterior.get('resultados') if contexto_anterior else None)
         )
     
     except HTTPException:
@@ -877,7 +903,7 @@ async def chat(request: ChatRequest):
         raise
     except Exception as e:
         metrics.increment_failures()
-  # ✅ MOSTRAR EL ERROR REAL EN CONSOLA
+        # ✅ MOSTRAR EL ERROR REAL EN CONSOLA
         import traceback
         print(f"❌ ERROR DETALLADO en endpoint /chat:")
         print(f"❌ Tipo: {type(e).__name__}")
@@ -890,9 +916,11 @@ async def chat(request: ChatRequest):
         
         return ChatResponse(
             response=error_message,
-            search_performed=False
+            search_performed=False,
+            propiedades=None
         )
-
+        
+        
 @app.get("/metrics")
 def get_metrics():
     """Endpoint para obtener métricas del servicio"""
