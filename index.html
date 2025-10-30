@@ -681,13 +681,13 @@ Te ayudo a encontrar la propiedad ideal. Podés:
                 return;
             }
 
-            // Construir mensaje claro para el usuario
+            // Construir mensaje MÁS ESPECÍFICO para el backend
             const descripcionFiltros = formatearFiltrosParaMensaje(filtros);
-            input.value = `Buscar propiedades con ${descripcionFiltros}`;
+            input.value = `BUSCAR PROPIEDADES específicamente con ${descripcionFiltros} - realizar búsqueda en base de datos y mostrar resultados`;
             
             // Enviar automáticamente
             send();
-        }
+}
 
         function limpiarFiltros() {
             document.getElementById('operacion').value = '';
@@ -739,8 +739,33 @@ Te ayudo a encontrar la propiedad ideal. Podés:
                 }
 
                 const data = await response.json();
-                addMessage(data.response || 'No se pudo generar una respuesta.');
-                
+                console.log('✅ Respuesta completa:', data);
+
+                // MEJOR MANEJO DE RESPUESTAS
+                if (data.response) {
+                    let mensajeMejorado = data.response;
+                    
+                    // Agregar información sobre los resultados de búsqueda
+                    if (data.search_performed && data.results_count !== null) {
+                        if (data.results_count > 0) {
+                            mensajeMejorado += `\n\n---\n**🎯 BÚSQUEDA EXITOSA**\n📊 **Encontré ${data.results_count} propiedades** que coinciden con tu búsqueda.`;
+                        } else {
+                            mensajeMejorado += `\n\n---\n**🔍 BÚSQUEDA REALIZADA**\n📭 No encontré propiedades con esos criterios. ¿Querés ajustar los filtros?`;
+                        }
+                    }
+                    
+                    // Si no se realizó búsqueda, agregar sugerencia
+                    if (!data.search_performed) {
+                        mensajeMejorado += `\n\n---\n**💡 CONSEJO**\nUsá los filtros a la derecha para búsquedas más específicas.`;
+                    }
+                    
+                    addMessage(mensajeMejorado);
+                } else if (data.error) {
+                    addMessage(`⚠️ Error: ${data.error}`);
+                } else {
+                    addMessage('❌ Respuesta inesperada del servidor');
+                }
+
                 statusText.textContent = 'Conectado';
                 
             } catch (error) {
