@@ -919,8 +919,52 @@ async def chat(request: ChatRequest):
         else:
             style_hint = "Respondé de forma explicativa, profesional y cálida como si fuera una consulta web."
 
-        prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
-        print("🧠 Prompt enviado a Gemini")
+        # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
+        if es_seguimiento_final and contexto_anterior and contexto_anterior.get('resultados'):
+            propiedades_contexto = contexto_anterior['resultados']
+            
+            # Crear string con todos los detalles de las propiedades
+            detalles_propiedades = ""
+            for i, prop in enumerate(propiedades_contexto, 1):
+                detalles_propiedades += f"""
+        PROPIEDAD {i}:
+        - Título: {prop.get('title', 'N/A')}
+        - Precio: ${prop.get('price', 'N/A')}
+        - Barrio: {prop.get('neighborhood', 'N/A')}
+        - Ambientes: {prop.get('rooms', 'N/A')}
+        - Metros: {prop.get('sqm', 'N/A')}m²
+        - Operación: {prop.get('operacion', 'N/A')}
+        - Tipo: {prop.get('tipo', 'N/A')}
+        - Descripción: {prop.get('description', 'N/A')}
+        - Dirección: {prop.get('direccion', 'N/A')}
+        - Antigüedad: {prop.get('antiguedad', 'N/A')}
+        - Amenities: {prop.get('amenities', 'N/A')}
+        - Cochera: {prop.get('cochera', 'N/A')}
+        - Balcón: {prop.get('balcon', 'N/A')}
+        - Aire acondicionado: {prop.get('aire_acondicionado', 'N/A')}
+        """
+            
+            prompt = f"""
+            Eres un asistente inmobiliario especializado. El usuario está haciendo una pregunta de seguimiento sobre propiedades mostradas anteriormente.
+            
+            CONTEXTO COMPLETO DE LAS PROPIEDADES:
+            {detalles_propiedades}
+            
+            PREGUNTA ACTUAL DEL USUARIO: "{user_text}"
+            
+            INSTRUCCIONES ESPECÍFICAS:
+            1. Responde específicamente con TODOS los detalles disponibles de las propiedades del contexto
+            2. NO preguntes qué detalles quiere - DALE directamente todos los detalles que tengas
+            3. Sé concreto, específico y proporciona información completa
+            4. {style_hint}
+            5. {contexto_dinamico}
+            """
+            print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
+        else:
+            # Prompt normal para nueva búsqueda
+            prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
+            print("🧠 Prompt normal enviado a Gemini")
+                
         
         metrics.increment_gemini_calls()
         answer = call_gemini_with_rotation(prompt)
