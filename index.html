@@ -553,10 +553,61 @@
 
         let conversacionActual = [];
 
+        // AGREGAR AL INICIO DEL SCRIPT (después de let conversacionActual = [])
+        let contextoActual = {
+            tipo: null,           // 'busqueda' | 'propiedad_especifica'
+            resultados: [],       // Array de propiedades mostradas
+            propiedad_focus: null, // Propiedad específica en foco
+            filtros_usados: {},   // Filtros aplicados en la última búsqueda
+            timestamp: null
+        };
+
+        // Función para actualizar el contexto
+// Función para actualizar el contexto
+        function actualizarContexto(resultados, filtros = {}, tipo = 'busqueda') {
+            contextoActual = {
+                tipo: tipo,
+                resultados: resultados || [],
+                propiedad_focus: resultados && resultados.length === 1 ? resultados[0] : null,
+                filtros_usados: filtros,
+                timestamp: new Date().toISOString()
+            };
+            console.log('🔍 Contexto actualizado:', contextoActual);
+        }
+
+        // Función para detectar si es una pregunta de seguimiento
+        function esPreguntaSeguimiento(mensaje) {
+            if (!contextoActual.resultados || contextoActual.resultados.length === 0) {
+                return false;
+            }
+            
+            const palabrasSeguimiento = [
+                'más', 'mas', 'detalles', 'características', 'caracteristicas', 'precio', 
+                'ubicación', 'ubicacion', 'contacto', 'fotos', 'este', 'esta', 'ese', 'esa',
+                'el primero', 'el segundo', 'la primera', 'la segunda', 'primero', 'segundo',
+                'información', 'informacion', 'dime', 'cuéntame', 'cuentame', 'hablame', 'háblame'
+            ];
+            
+            const mensajeLower = mensaje.toLowerCase().trim();
+            
+            // Detectar patrones de seguimiento
+            const patronesSeguimiento = [
+                /más (información|informacion|detalles|data)/i,
+                /(dime|cuéntame|cuentame|háblame|hablame) (más|mas)/i,
+                /(el|la) (primero|primera|segundo|segunda)/i,
+                /(este|esta|ese|esa) (propiedad|departamento|casa|ph|terreno)/i,
+                /(tiene|tienen) (fotos|imágenes|imagenes|contacto)/i
+            ];
+            
+            return palabrasSeguimiento.some(palabra => mensajeLower.includes(palabra)) ||
+                patronesSeguimiento.some(patron => patron.test(mensajeLower));
+        }
+        
+        
         // Mensaje de bienvenida
         const welcomeMessage = `¡Hola! 👋 Soy tu asistente de Dante Propiedades. 
 
-Te ayudo a encontrar la propiedad ideal. Podés:
+        Te ayudo a encontrar la propiedad ideal. Podés:
 
 • Usar los filtros para búsquedas específicas
 • Contarme directamente qué necesitás
@@ -599,10 +650,21 @@ Te ayudo a encontrar la propiedad ideal. Podés:
             typingIndicator.style.display = 'none';
         }
 
-        function resetearChat() {
+       function resetearChat() {
             if (confirm('¿Estás seguro de que querés empezar una nueva conversación? Se perderá el historial actual.')) {
                 chatBox.innerHTML = '';
                 conversacionActual = [];
+                
+                // LIMPIAR CONTEXTO también
+                contextoActual = {
+                    tipo: null,
+                    resultados: [],
+                    propiedad_focus: null,
+                    filtros_usados: {},
+                    timestamp: null
+                };
+                
+                limpiarFiltros();
                 
                 // Mensaje de reinicio
                 setTimeout(() => {
@@ -720,6 +782,10 @@ Te ayudo a encontrar la propiedad ideal. Podés:
             document.getElementById('metrosMax').value = '';
         }
 
+
+
+
+
         async function send() {
             let msg = input.value.trim();
             const filtrosSeleccionados = obtenerFiltrosSeleccionados();
@@ -734,6 +800,10 @@ Te ayudo a encontrar la propiedad ideal. Podés:
                 return;
             }
 
+            // DETECTAR SI ES SEGUIMIENTO
+            const esSeguimiento = esPreguntaSeguimiento(msg);
+            console.log('🔍 Es seguimiento?', esSeguimiento, 'Contexto:', contextoActual);
+
             addMessage(msg, 'user');
             input.value = '';
             button.disabled = true;
@@ -741,17 +811,26 @@ Te ayudo a encontrar la propiedad ideal. Podés:
             showTypingIndicator();
 
             try {
+                const payload = {
+                    message: msg,
+                    channel: 'web',
+                    filters: filtrosSeleccionados
+                };
+
+                // AGREGAR CONTEXTO SI ES SEGUIMIENTO
+                if (esSeguimiento && contextoActual.resultados.length > 0) {
+                    payload.contexto_anterior = contextoActual;
+                    payload.es_seguimiento = true;
+                    console.log('📤 Enviando contexto al backend:', contextoActual);
+                }
+
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        message: msg,
-                        channel: 'web',
-                        filters: filtrosSeleccionados  // 🔥 ENVIAR FILTROS AL BACKEND
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) {
@@ -761,22 +840,33 @@ Te ayudo a encontrar la propiedad ideal. Podés:
                 const data = await response.json();
                 console.log('✅ Respuesta completa:', data);
 
-                // MEJOR MANEJO DE RESPUESTAS
+                // MEJOR MANEJO DE RESPUESTAS CON CONTEXTO
                 if (data.response) {
                     let mensajeMejorado = data.response;
                     
-                    // Agregar información sobre los resultados de búsqueda
+                    // AGREGAR INFORMACIÓN SOBRE RESULTADOS Y ACTUALIZAR CONTEXTO
                     if (data.search_performed && data.results_count !== null) {
                         if (data.results_count > 0) {
                             mensajeMejorado += `\n\n---\n**🎯 BÚSQUEDA EXITOSA**\n📊 **Encontré ${data.results_count} propiedades** que coinciden con tu búsqueda.`;
+                            
+                            // ACTUALIZAR CONTEXTO con los nuevos resultados
+                            actualizarContexto(data.propiedades || [], filtrosSeleccionados, 'busqueda');
+                            
+                            // AGREGAR INSTRUCCIÓN DE SEGUIMIENTO SOLO SI ES NUEVA BÚSQUEDA
+                            if (!esSeguimiento) {
+                                mensajeMejorado += `\n\n**💡 ¿Necesitás más información?** Podés preguntar:\n• "Más detalles sobre el primero"\n• "¿Tiene fotos el departamento en Palermo?"\n• "Contacto para la propiedad de $280,000"`;
+                            }
                         } else {
                             mensajeMejorado += `\n\n---\n**🔍 BÚSQUEDA REALIZADA**\n📭 No encontré propiedades con esos criterios. ¿Querés ajustar los filtros?`;
+                            // Limpiar contexto si no hay resultados
+                            actualizarContexto([], {}, 'busqueda');
                         }
                     }
                     
-                    // Si no se realizó búsqueda, agregar sugerencia
-                    if (!data.search_performed) {
-                        mensajeMejorado += `\n\n---\n**💡 CONSEJO**\nUsá los filtros a la derecha para búsquedas más específicas.`;
+                    // Si no se realizó búsqueda pero es seguimiento, mantener contexto
+                    if (!data.search_performed && esSeguimiento) {
+                        // Mantener el contexto anterior para seguir la conversación
+                        console.log('🔄 Manteniendo contexto para seguimiento');
                     }
                     
                     addMessage(mensajeMejorado);
