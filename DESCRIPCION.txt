@@ -1,220 +1,243 @@
-h📋 INSTRUCTIVO COMPLETO: CHATBOT DANTE PROPIEDADES
-🎯 DESCRIPCIÓN GENERAL
-Chatbot especializado en inmobiliaria con capacidad de respuestas generales, desplegado en producción 24/7.
+powershell
+# Desinstalar versiones problemáticas
+pip uninstall pydantic fastapi -y
 
-🌐 ARQUITECTURA VISUAL DEL SISTEMA
+# Instalar versiones compatibles con Python 3.12
+pip install "pydantic==2.5.0" "fastapi==0.104.1" uvicorn requests google-generativeai python-dotenv
+
+# De excel a json en la carpeta testeo. Asegurarse pip install pandas openpyxl. 
+
+INSTRUCTIVO COMPLETO: DANTE PROPIEDADES
+🏠 ¿QUÉ ES DANTE PROPIEDADES?
+Dante Propiedades es una plataforma inmobiliaria inteligente que combina:
+
+🤖 Asistente virtual con IA (Google Gemini)
+
+🏘️ Base de datos de propiedades
+
+🔍 Sistema de búsqueda inteligente
+
+💬 Chat interactivo en tiempo real
+
+📱 Interfaz web moderna y responsive
+
+🛠️ ARQUITECTURA TÉCNICA
+Frontend (Cliente)
 text
-CHATBOT_DANTE_PROPIEDADES/
-├── 🐍 BACKEND_PYTHON/
-│   ├── main.py                 # 🚀 Servidor FastAPI principal
-│   ├── config.py              # 🔑 Configuración API Keys Gemini
-│   ├── requirements.txt       # 📦 Dependencias Python
-│   ├── properties.json        # 🏠 Base de datos de propiedades
-│   └── tests/
-│       ├── test_simpl.py      # 🧪 Test básico
-│       ├── test_propiedades.py # 🏠 Test inmobiliario
-│       └── test_velocidad.py  # ⏱️ Test rendimiento
-├── 🌐 FRONTEND_WEB/
-│   ├── index.html            # 🏗️ Página principal
-│   ├── config.js             # ⚙️ Configuración URLs
-│   ├── script.js             # 🧠 Lógica del chat
-│   └── styles.css            # 🎨 Estilos
-└── 🔄 AUTOMATIZACION/
-    └── .github/workflows/
-        └── keep-alive.yml    # ⏰ Keep-alive automático
-📁 CONTENIDO DETALLADO DE ARCHIVOS
-🐍 BACKEND - main.py
-python
-# SERVIDOR FASTAPI PRINCIPAL
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-import requests
-import json
-import os
-
-app = FastAPI()
-
-# Configuración CORS
-app.add_middleware(CORSMiddleware, allow_origins=["*"])
-
-@app.post("/chat")
-async def chat_endpoint(request: Request):
-    """Endpoint principal del chatbot"""
-    data = await request.json()
-    mensaje = data.get("message", "")
-    
-    # Lógica de procesamiento con Gemini AI
-    respuesta = procesar_mensaje(mensaje)
-    
-    return {
-        "mensaje_recibido": mensaje,
-        "respuesta_bot": respuesta
-    }
-
-@app.get("/")
-def root():
-    return {"status": "Backend activo", "endpoint": "/chat"}
-🔑 CONFIGURACIÓN - config.py
-python
-# CONFIGURACIÓN API KEYS Y MODELO GEMINI
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# Claves API de Gemini
-API_KEYS = ["AIzaSyCNHuDW5ytZwQzwy3og5ZxYBjV0Tc6oyLU"]
-
-# Modelo de IA
-WORKING_MODEL = "gemini-2.0-flash-001"
-ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{WORKING_MODEL}:generateContent"
-📦 DEPENDENCIAS - requirements.txt
+📁 CHATGPT/
+├── 📄 index.html          # Interfaz principal
+├── 🎨 CSS incorporado     # Estilos en el mismo HTML
+├── ⚡ JavaScript          # Lógica del cliente
+└── 🖼️ llave.png          # Logo (opcional)
+Backend (Servidor)
 text
-fastapi==0.104.1
-uvicorn==0.24.0
-requests==2.31.0
-python-dotenv==1.0.0
-python-multipart==0.0.6
-🏠 BASE DE DATOS - properties.json
+📁 CHATGPT/
+├── 📄 main.py             # Aplicación FastAPI principal
+├── 📄 config.py           # Configuración y variables
+├── 📄 requirements.txt    # Dependencias Python
+├── 📄 Dockerfile          # Contenedor para producción
+├── 📄 runtime.txt         # Versión de Python
+└── 📄 render.yaml         # Configuración de deploy
+Base de Datos & Datos
+text
+📁 CHATGPT/
+├── 📄 properties.json     # Catálogo de propiedades
+├── 📄 propiedades.db      # Base SQLite (generada)
+├── 📄 conversaciones.db   # Logs de chats
+└── 📁 gemini/
+    └── 📄 client.py       # Cliente de Gemini AI
+📄 DETALLE DE CADA ARCHIVO
+1. index.html - INTERFAZ WEB
+Propósito: Frontend completo de la aplicación
+Características:
+
+Diseño responsive con CSS moderno
+
+Panel de filtros lateral (barrio, precio, ambientes, etc.)
+
+Área de chat en tiempo real
+
+Integración con backend via Fetch API
+
+Compatible con móviles y desktop
+
+2. main.py - BACKEND PRINCIPAL
+Propósito: Servidor FastAPI con toda la lógica
+Endpoints principales:
+
+POST /chat - Procesar mensajes del usuario
+
+GET /properties - Buscar propiedades con filtros
+
+GET /status - Estado del servicio
+
+GET /debug - Información de diagnóstico
+
+GET /logs - Ver historial de conversaciones
+
+Funcionalidades clave:
+
+Detección automática de filtros en el texto
+
+Búsqueda en base de datos SQLite
+
+Integración con Gemini AI para respuestas
+
+Logging de conversaciones
+
+Sistema de métricas y estadísticas
+
+3. config.py - CONFIGURACIÓN
+Propósito: Gestión de variables y configuración
+Contenido:
+
+Carga de variables de entorno
+
+Configuración de API Keys de Gemini
+
+Definición del modelo de IA a usar
+
+Configuración de endpoints
+
+4. properties.json - CATÁLOGO
+Propósito: Base de datos de propiedades disponibles
+Estructura:
+
 json
-[
-  {
-    "id": 1,
-    "tipo": "Departamento",
-    "ubicacion": "Palermo",
-    "precio": 150000,
-    "dormitorios": 2,
-    "amueblada": true,
-    "disponible": true
-  },
-  {
-    "id": 2,
-    "tipo": "Casa", 
-    "ubicacion": "Belgrano",
-    "precio": 280000,
-    "dormitorios": 3,
-    "amueblada": false,
-    "disponible": true
-  }
-]
-🧪 TEST - test_simpl.py
-python
-# TEST BÁSICO DEL CHATBOT
-import requests
-
-def test_basico():
-    response = requests.post(
-        "http://127.0.0.1:8000/chat",
-        json={"message": "Hola", "channel": "web"}
-    )
-    
-    if response.status_code == 200:
-        data = response.json()
-        print(f"✅ Respuesta: {data.get('respuesta_bot')}")
-🌐 FRONTEND - config.js
-javascript
-// CONFIGURACIÓN DEL FRONTEND
-const CONFIG = {
-    API_URL: 'https://chatgpt-eio1.onrender.com/chat',
-    UI: {
-        botName: 'Asistente Dante Propiedades',
-        botAvatar: '🏠',
-        userAvatar: '👤'
-    }
-};
-🧠 LÓGICA - script.js
-javascript
-// LÓGICA PRINCIPAL DEL CHAT
-class DanteChatbot {
-    async sendMessage(message) {
-        const response = await fetch(CONFIG.API_URL, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({message: message, channel: 'web'})
-        });
-        
-        const data = await response.json();
-        return data.respuesta_bot;
-    }
+{
+  "id": 1,
+  "title": "Estudio en Palermo Hollywood",
+  "neighborhood": "Palermo",
+  "price": 135000,
+  "rooms": 1,
+  "sqm": 32,
+  "description": "Moderno estudio...",
+  "operacion": "alquiler",
+  "tipo": "departamento"
 }
-🏗️ PÁGINA - index.html
-html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Chatbot Dante Propiedades</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="chat-container">
-        <h1>🏠 Dante Propiedades</h1>
-        <div id="chat-box"></div>
-        <input type="text" id="user-input" placeholder="Escribe tu mensaje...">
-        <button onclick="sendMessage()">Enviar</button>
-    </div>
-    
-    <script src="config.js"></script>
-    <script src="script.js"></script>
-</body>
-</html>
-⏰ AUTOMATIZACIÓN - keep-alive.yml
-yaml
-# GITHUB ACTIONS - KEEP ALIVE
-name: Keep Render Alive
-on:
-  schedule:
-    - cron: '*/5 * * * *'  # Cada 5 minutos
+5. gemini/client.py - CLIENTE DE IA
+Propósito: Comunicación con Google Gemini API
+Funcionalidad:
 
-jobs:
-  ping-render:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ping Render Service
-        run: |
-          curl -X GET "https://chatgpt-eio1.onrender.com"
-🔄 FLUJO DE DATOS
-text
-USUARIO → [Frontend GitHub Pages] → [Backend Render] → [Gemini AI] → RESPUESTA
-     ↓
- [properties.json] → Datos locales de propiedades
-     ↓
- [GitHub Actions] → Keep-alive automático
-🚀 URLS DE PRODUCCIÓN
-Frontend (Cliente):
-text
-https://dantearona-collab.github.io/CHATGPT/
-Backend (Servidor):
-text
-https://chatgpt-eio1.onrender.com
-API Endpoints:
-GET / - Health check
+Rotación automática de API Keys
 
-POST /chat - Enviar mensajes al chatbot
+Manejo de errores y límites
 
-⚙️ COMANDOS DE OPERACIÓN
-Iniciar servidor local:
-bash
-cd C:\Users\artar\Downloads\CHATGPT
-python main.py
-Ejecutar tests:
-bash
-python test_simpl.py
-python test_propiedades.py
-Actualizar producción:
-bash
-git add .
-git commit -m "Descripción cambios"
-git push origin main
-# Render se actualiza automáticamente en 2-5 min
-📊 MONITOREO
-Render Dashboard:
-text
-https://dashboard.render.com
-GitHub Actions:
-text
-https://github.com/dantearona-collab/CHATGPT/actions
-GitHub Pages:
-text
-https://github.com/dantearona-collab/CHATGPT/settings/pages
-¿Necesitas que detalle más algún archivo específico o flujo particular?
+Configuración del modelo generative
 
+🚀 FLUJO DE FUNCIONAMIENTO
+1. Usuario envía mensaje
+text
+Frontend → POST /chat → Backend
+2. Procesamiento inteligente
+python
+# Backend detecta:
+- Filtros en el texto (barrio, precio, tipo)
+- Consulta base de datos
+- Construye prompt para Gemini
+- Llama a la API de IA
+3. Generación de respuesta
+text
+Gemini AI → Respuesta personalizada → Frontend
+4. Presentación al usuario
+text
+Interfaz muestra propiedades + explicación de IA
+🎯 CARACTERÍSTICAS INTELIGENTES
+🔍 DETECCIÓN AUTOMÁTICA DE FILTROS
+El sistema detecta automáticamente:
+
+Barrios: "Palermo", "Recoleta", "Belgrano"
+
+Operación: "alquiler", "venta", "comprar"
+
+Tipos: "departamento", "casa", "PH"
+
+Precios: "hasta $200,000", "mínimo $100,000"
+
+Ambientes: "2 ambientes", "3 habitaciones"
+
+🤖 INTEGRACIÓN CON GEMINI AI
+Contexto inmobiliario especializado
+
+Respuestas naturales y profesionales
+
+Personalización según consulta del usuario
+
+Manejo de errores elegante
+
+📊 GESTIÓN DE DATOS
+Base SQLite para búsquedas rápidas
+
+Cache de consultas para mejor performance
+
+Logging completo de conversaciones
+
+Métricas en tiempo real
+
+🌐 DEPLOY Y HOSTING
+Frontend: GitHub Pages
+text
+https://artaronamail-debug.github.io/CHATGPT/
+Backend: Render.com
+text
+https://dante-propiedades-backend.onrender.com
+Configuración:
+Python 3.11 via Docker
+
+Variables de entorno para API Keys
+
+Deploy automático desde GitHub
+
+🔧 MANTENIMIENTO Y ESCALAMIENTO
+Agregar más propiedades:
+Editar properties.json
+
+El sistema las carga automáticamente
+
+Actualizar API Keys:
+Generar nuevas en Google AI Studio
+
+Actualizar en Render → Environment
+
+Modificar interfaz:
+Editar index.html
+
+Push a GitHub → Deploy automático
+
+🎨 PERSONALIZACIÓN POSIBLE
+Fácil de modificar:
+✨ Estilos CSS en index.html
+
+🏘️ Propiedades en properties.json
+
+🔧 Configuración en config.py
+
+🤖 Comportamiento de IA en main.py
+
+Extensiones futuras:
+📧 Sistema de notificaciones
+
+📱 App móvil nativa
+
+🔐 Sistema de usuarios
+
+📊 Panel administrativo
+
+🌐 Integración con APIs inmobiliarias
+
+✅ ESTADO ACTUAL
+🚀 APLICACIÓN 100% FUNCIONAL:
+
+✅ Frontend responsive en GitHub Pages
+
+✅ Backend escalable en Render
+
+✅ IA Gemini integrada y funcionando
+
+✅ Base de datos con 16 propiedades
+
+✅ Sistema de búsqueda inteligente
+
+✅ Chat en tiempo real
+
+✅ Deploy automático configurado
