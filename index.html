@@ -845,6 +845,7 @@
                     let mensajeMejorado = data.response;
                     
                     // AGREGAR INFORMACIÓN SOBRE RESULTADOS Y ACTUALIZAR CONTEXTO
+                   // AGREGAR INFORMACIÓN SOBRE RESULTADOS Y ACTUALIZAR CONTEXTO
                     if (data.search_performed && data.results_count !== null) {
                         if (data.results_count > 0) {
                             mensajeMejorado += `\n\n---\n**🎯 BÚSQUEDA EXITOSA**\n📊 **Encontré ${data.results_count} propiedades** que coinciden con tu búsqueda.`;
@@ -852,9 +853,10 @@
                             // ACTUALIZAR CONTEXTO con los nuevos resultados
                             actualizarContexto(data.propiedades || [], filtrosSeleccionados, 'busqueda');
                             
-                            // AGREGAR INSTRUCCIÓN DE SEGUIMIENTO SOLO SI ES NUEVA BÚSQUEDA
+                            // AGREGAR INSTRUCCIÓN DE SEGUIMIENTO SOLO SI ES NUEVA BÚSQUEDA Y HAY RESULTADOS
                             if (!esSeguimiento) {
                                 mensajeMejorado += `\n\n**💡 ¿Necesitás más información?** Podés preguntar:\n• "Más detalles sobre el primero"\n• "¿Tiene fotos el departamento en Palermo?"\n• "Contacto para la propiedad de $280,000"`;
+                                console.log('💡 Mensaje de seguimiento agregado');
                             }
                         } else {
                             mensajeMejorado += `\n\n---\n**🔍 BÚSQUEDA REALIZADA**\n📭 No encontré propiedades con esos criterios. ¿Querés ajustar los filtros?`;
