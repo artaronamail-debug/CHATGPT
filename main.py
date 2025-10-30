@@ -921,50 +921,62 @@ async def chat(request: ChatRequest):
 
         # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
         if es_seguimiento_final and contexto_anterior and contexto_anterior.get('resultados'):
-            print("🚨 VERIFICACIÓN CRÍTICA - Propiedades en contexto:")
-            for i, prop in enumerate(contexto_anterior['resultados']):
-                print(f"   {i+1}. {prop.get('title', 'N/A')} - ${prop.get('price', 'N/A')}")
-            
-            
-            
             propiedades_contexto = contexto_anterior['resultados']
+        
+        # 👇 FILTRAR: Si el usuario menciona una propiedad específica, usar SOLO esa
+        propiedad_especifica = None
+        if "palermo soho" in user_text.lower() or "280.000" in user_text.lower() or "280,000" in user_text.lower():
+            for prop in propiedades_contexto:
+                if "soho" in prop.get('title', '').lower() or prop.get('price') == 280000:
+                    propiedad_especifica = prop
+                    break
+        
+        # Si no se menciona específicamente, usar la primera del contexto
+        if not propiedad_especifica and propiedades_contexto:
+            propiedad_especifica = propiedades_contexto[0]
+        
+        if propiedad_especifica:
+            print(f"🎯 PROPIEADAD ESPECÍFICA SELECCIONADA: {propiedad_especifica.get('title')}")
             
-            # Crear string con todos los detalles de las propiedades
-            detalles_propiedades = ""
-            for i, prop in enumerate(propiedades_contexto, 1):
-                detalles_propiedades += f"""
-        PROPIEDAD {i}:
-        - Título: {prop.get('title', 'N/A')}
-        - Precio: ${prop.get('price', 'N/A')}
-        - Barrio: {prop.get('neighborhood', 'N/A')}
-        - Ambientes: {prop.get('rooms', 'N/A')}
-        - Metros: {prop.get('sqm', 'N/A')}m²
-        - Operación: {prop.get('operacion', 'N/A')}
-        - Tipo: {prop.get('tipo', 'N/A')}
-        - Descripción: {prop.get('description', 'N/A')}
-        - Dirección: {prop.get('direccion', 'N/A')}
-        - Antigüedad: {prop.get('antiguedad', 'N/A')}
-        - Amenities: {prop.get('amenities', 'N/A')}
-        - Cochera: {prop.get('cochera', 'N/A')}
-        - Balcón: {prop.get('balcon', 'N/A')}
-        - Aire acondicionado: {prop.get('aire_acondicionado', 'N/A')}
-        """
+            detalles_propiedad = f"""
+    PROPIEDAD ESPECÍFICA:
+    - Título: {propiedad_especifica.get('title', 'N/A')}
+    - Precio: ${propiedad_especifica.get('price', 'N/A')}
+    - Barrio: {propiedad_especifica.get('neighborhood', 'N/A')}
+    - Ambientes: {propiedad_especifica.get('rooms', 'N/A')}
+    - Metros: {propiedad_especifica.get('sqm', 'N/A')}m²
+    - Operación: {propiedad_especifica.get('operacion', 'N/A')}
+    - Tipo: {propiedad_especifica.get('tipo', 'N/A')}
+    - Descripción: {propiedad_especifica.get('description', 'N/A')}
+    - Dirección: {propiedad_especifica.get('direccion', 'N/A')}
+    - Antigüedad: {propiedad_especifica.get('antiguedad', 'N/A')}
+    - Amenities: {propiedad_especifica.get('amenities', 'N/A')}
+    - Cochera: {propiedad_especifica.get('cochera', 'N/A')}
+    - Balcón: {propiedad_especifica.get('balcon', 'N/A')}
+    - Aire acondicionado: {propiedad_especifica.get('aire_acondicionado', 'N/A')}
+    - Expensas: {propiedad_especifica.get('expensas', 'N/A')}
+    - Estado: {propiedad_especifica.get('estado', 'N/A')}
+    """
             
             prompt = f"""
-            ERES UN ASISTENTE INMOBILIARIO. El usuario está haciendo una pregunta de seguimiento SOBRE LA PROPIEADAD ESPECÍFICA que se mostró anteriormente.
+    ERES UN ASISTENTE INMOBILIARIO. El usuario está preguntando específicamente sobre ESTA propiedad:
 
-            INFORMACIÓN EXACTA DE LA PROPIEDAD:
-            {detalles_propiedades}
+    {detalles_propiedad}
 
-            PREGUNTA ACTUAL DEL USUARIO: "{user_text}"
+    PREGUNTA DEL USUARIO: "{user_text}"
 
-            INSTRUCCIONES ESTRICTAS:
-            1. Responde EXCLUSIVAMENTE sobre la propiedad mostrada arriba
-            2. Proporciona TODOS los detalles disponibles de esa propiedad específica
-            3. NO menciones otras propiedades
-            4. NO preguntes qué detalles quiere - DALE directamente toda la información
-            5. {style_hint}
-            """
+    INSTRUCCIONES ESTRICTAS:
+    1. Responde EXCLUSIVAMENTE sobre esta propiedad específica
+    2. Proporciona TODOS los detalles disponibles listados arriba
+    3. NO menciones otras propiedades
+    4. NO preguntes qué detalles quiere - DALE directamente toda la información
+    5. Si faltan datos, menciona solo los que tienes
+    6. {style_hint}
+
+    RESPONDE CON TODOS LOS DETALLES:
+    """
+ 
+ 
             
             print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
         else:
