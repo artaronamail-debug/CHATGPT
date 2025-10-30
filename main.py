@@ -921,66 +921,74 @@ async def chat(request: ChatRequest):
 
         # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
         if es_seguimiento_final and contexto_anterior and contexto_anterior.get('resultados'):
-            propiedades_contexto = contexto_anterior['resultados']
-        
-        # 👇 FILTRAR: Si el usuario menciona una propiedad específica, usar SOLO esa
-        propiedad_especifica = None
-        if "palermo soho" in user_text.lower() or "280.000" in user_text.lower() or "280,000" in user_text.lower():
-            for prop in propiedades_contexto:
-                if "soho" in prop.get('title', '').lower() or prop.get('price') == 280000:
-                    propiedad_especifica = prop
-                    break
-        
-        # Si no se menciona específicamente, usar la primera del contexto
-        if not propiedad_especifica and propiedades_contexto:
-            propiedad_especifica = propiedades_contexto[0]
-        
-        if propiedad_especifica:
-            print(f"🎯 PROPIEADAD ESPECÍFICA SELECCIONADA: {propiedad_especifica.get('title')}")
+                # 👇 AGREGAR VERIFICACIÓN DE SEGURIDAD
+            propiedades_contexto = contexto_anterior.get('resultados', [])
             
-            detalles_propiedad = f"""
-    PROPIEDAD ESPECÍFICA:
-    - Título: {propiedad_especifica.get('title', 'N/A')}
-    - Precio: ${propiedad_especifica.get('price', 'N/A')}
-    - Barrio: {propiedad_especifica.get('neighborhood', 'N/A')}
-    - Ambientes: {propiedad_especifica.get('rooms', 'N/A')}
-    - Metros: {propiedad_especifica.get('sqm', 'N/A')}m²
-    - Operación: {propiedad_especifica.get('operacion', 'N/A')}
-    - Tipo: {propiedad_especifica.get('tipo', 'N/A')}
-    - Descripción: {propiedad_especifica.get('description', 'N/A')}
-    - Dirección: {propiedad_especifica.get('direccion', 'N/A')}
-    - Antigüedad: {propiedad_especifica.get('antiguedad', 'N/A')}
-    - Amenities: {propiedad_especifica.get('amenities', 'N/A')}
-    - Cochera: {propiedad_especifica.get('cochera', 'N/A')}
-    - Balcón: {propiedad_especifica.get('balcon', 'N/A')}
-    - Aire acondicionado: {propiedad_especifica.get('aire_acondicionado', 'N/A')}
-    - Expensas: {propiedad_especifica.get('expensas', 'N/A')}
-    - Estado: {propiedad_especifica.get('estado', 'N/A')}
-    """
-            
-            prompt = f"""
-    ERES UN ASISTENTE INMOBILIARIO. El usuario está preguntando específicamente sobre ESTA propiedad:
+            if not propiedades_contexto:
+                print("⚠️ Contexto vacío - usando prompt normal")
+                prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
+            else:
+                print(f"🎯 Propiedades en contexto: {len(propiedades_contexto)}")
+                
+                # 👇 FILTRAR: Si el usuario menciona una propiedad específica, usar SOLO esa
+                propiedad_especifica = None
+                if "palermo soho" in user_text.lower() or "280.000" in user_text.lower() or "280,000" in user_text.lower():
+                    for prop in propiedades_contexto:
+                        if "soho" in prop.get('title', '').lower() or prop.get('price') == 280000:
+                            propiedad_especifica = prop
+                            break
+                
+                # Si no se menciona específicamente, usar la primera del contexto
+                if not propiedad_especifica and propiedades_contexto:
+                    propiedad_especifica = propiedades_contexto[0]
+                
+                if propiedad_especifica:
+                    print(f"🎯 PROPIEADAD ESPECÍFICA SELECCIONADA: {propiedad_especifica.get('title')}")
+                    
+                    detalles_propiedad = f"""
+        PROPIEDAD ESPECÍFICA:
+        - Título: {propiedad_especifica.get('title', 'N/A')}
+        - Precio: ${propiedad_especifica.get('price', 'N/A')}
+        - Barrio: {propiedad_especifica.get('neighborhood', 'N/A')}
+        - Ambientes: {propiedad_especifica.get('rooms', 'N/A')}
+        - Metros: {propiedad_especifica.get('sqm', 'N/A')}m²
+        - Operación: {propiedad_especifica.get('operacion', 'N/A')}
+        - Tipo: {propiedad_especifica.get('tipo', 'N/A')}
+        - Descripción: {propiedad_especifica.get('description', 'N/A')}
+        - Dirección: {propiedad_especifica.get('direccion', 'N/A')}
+        - Antigüedad: {propiedad_especifica.get('antiguedad', 'N/A')}
+        - Amenities: {propiedad_especifica.get('amenities', 'N/A')}
+        - Cochera: {propiedad_especifica.get('cochera', 'N/A')}
+        - Balcón: {propiedad_especifica.get('balcon', 'N/A')}
+        - Aire acondicionado: {propiedad_especifica.get('aire_acondicionado', 'N/A')}
+        - Expensas: {propiedad_especifica.get('expensas', 'N/A')}
+        - Estado: {propiedad_especifica.get('estado', 'N/A')}
+        """
+                    
+                    prompt = f"""
+        ERES UN ASISTENTE INMOBILIARIO. El usuario está preguntando específicamente sobre ESTA propiedad:
 
-    {detalles_propiedad}
+        {detalles_propiedad}
 
-    PREGUNTA DEL USUARIO: "{user_text}"
+        PREGUNTA DEL USUARIO: "{user_text}"
 
-    INSTRUCCIONES ESTRICTAS:
-    1. Responde EXCLUSIVAMENTE sobre esta propiedad específica
-    2. Proporciona TODOS los detalles disponibles listados arriba
-    3. NO menciones otras propiedades
-    4. NO preguntes qué detalles quiere - DALE directamente toda la información
-    5. Si faltan datos, menciona solo los que tienes
-    6. {style_hint}
+        INSTRUCCIONES ESTRICTAS:
+        1. Responde EXCLUSIVAMENTE sobre esta propiedad específica
+        2. Proporciona TODOS los detalles disponibles listados arriba
+        3. NO menciones otras propiedades
+        4. NO preguntes qué detalles quiere - DALE directamente toda la información
+        5. Si faltan datos, menciona solo los que tienes
+        6. {style_hint}
 
-    RESPONDE CON TODOS LOS DETALLES:
-    """
- 
- 
-            
-            print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
+        RESPONDE CON TODOS LOS DETALLES:
+        """
+                    print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
+                else:
+                    # Prompt normal para nueva búsqueda
+                    prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
+                    print("🧠 Prompt normal enviado a Gemini")
         else:
-            # Prompt normal para nueva búsqueda
+            # 👇 ESTE ES EL ELSE QUE FALTA - para cuando NO hay contexto de seguimiento
             prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
             print("🧠 Prompt normal enviado a Gemini")
                 
