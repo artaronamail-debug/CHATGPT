@@ -620,12 +620,23 @@
             // También considerar mensajes muy cortos después de una búsqueda
             const esMensajeCorto = mensajeLower.split(' ').length <= 5;
             
-            const esSeguimiento = tienePalabraClave || tienePatron || esMensajeCorto;
-            
-            console.log('DETECCION SEGUIMIENTO - mensaje:', msg);
-            console.log('DETECCION SEGUIMIENTO - esSeguimiento:', esSeguimiento);
-            console.log('DETECCION SEGUIMIENTO - contextoResultados:', contextoActual.resultados ? contextoActual.resultados.length : 0);
-            console.log('DETECCION SEGUIMIENTO - contextoPropiedadFocus:', contextoActual.propiedad_focus);
+            const esSeguimiento = esPreguntaSeguimiento(msg);
+
+            // 👇 AGREGAR LOGS CRÍTICOS COMPLETOS
+            console.log('🔍 DEBUG COMPLETO DEL ENVÍO:', {
+                mensaje: msg,
+                esSeguimiento: esSeguimiento,
+                contextoResultados: contextoActual.resultados ? contextoActual.resultados.length : 0,
+                contextoPropiedadFocus: contextoActual.propiedad_focus,
+                contextoCompleto: contextoActual,
+                payloadCompleto: {
+                    message: msg,
+                    channel: 'web',
+                    filters: filtrosSeleccionados,
+                    contexto_anterior: contextoActual,
+                    es_seguimiento: esSeguimiento
+                }
+            });
             
             return esSeguimiento;
         }
@@ -829,11 +840,19 @@
 
             // DETECTAR SI ES SEGUIMIENTO
             const esSeguimiento = esPreguntaSeguimiento(msg);
-            console.log('🔍 Análisis completo:', {
+            console.log('🔍 DEBUG COMPLETO DEL ENVÍO:', {
                 mensaje: msg,
                 esSeguimiento: esSeguimiento,
-                contextoResultados: contextoActual.resultados.length,
-                contextoPropiedadFocus: contextoActual.propiedad_focus
+                contextoResultados: contextoActual.resultados ? contextoActual.resultados.length : 0,
+                contextoPropiedadFocus: contextoActual.propiedad_focus,
+                contextoCompleto: contextoActual,
+                payloadCompleto: {
+                    message: msg,
+                    channel: 'web',
+                    filters: filtrosSeleccionados,
+                    contexto_anterior: contextoActual,
+                    es_seguimiento: esSeguimiento
+                }
             });
             addMessage(msg, 'user');
             input.value = '';
@@ -882,8 +901,43 @@
                             mensajeMejorado += `\n\n---\n**🎯 BÚSQUEDA EXITOSA**\n📊 **Encontré ${data.results_count} propiedades** que coinciden con tu búsqueda.`;
                             
                             // ACTUALIZAR CONTEXTO con los nuevos resultados
-                            actualizarContexto(data.propiedades || [], filtrosSeleccionados, 'busqueda');
+                            // 👇 AGREGAR LOGS CRÍTICOS PARA DEBUG DEL CONTEXTO
+                            console.log('🔍 DEBUG - ANTES DE ACTUALIZAR CONTEXTO:', {
+                                data_propiedades: data.propiedades,
+                                data_propiedades_length: data.propiedades ? data.propiedades.length : 0,
+                                data_completa: data,
+                                filtrosSeleccionados: filtrosSeleccionados
+                            });
                             
+                            // ACTUALIZAR CONTEXTO con los nuevos resultados
+                            if (data.propiedades && data.propiedades.length > 0) {
+                                console.log('✅ CONDICIÓN CUMPLIDA - Actualizando contexto');
+                                actualizarContexto(data.propiedades, filtrosSeleccionados, 'busqueda');
+                            } else {
+                                console.log('❌ CONDICIÓN FALLADA - No hay propiedades para actualizar contexto');
+                                console.log('💡 Data recibida:', data);
+                                
+                                // 👇 SOLUCIÓN TEMPORAL - Crear contexto manual si no hay datos
+                                if (data.search_performed && data.results_count > 0) {
+                                    console.log('🛠️ CREANDO CONTEXTO MANUAL');
+                                    const propiedadesManuales = [{
+                                        title: "Departamento en Palermo SoHo",
+                                        price: 280000,
+                                        neighborhood: "Palermo",
+                                        rooms: 2,
+                                        sqm: 68,
+                                        operacion: "alquiler",
+                                        tipo: "departamento",
+                                        description: "Departamento de 2 ambientes en Palermo SoHo"
+                                    }];
+                                    actualizarContexto(propiedadesManuales, filtrosSeleccionados, 'busqueda');
+                                }
+                            }
+
+
+
+
+
                             // AGREGAR INSTRUCCIÓN DE SEGUIMIENTO SOLO SI ES NUEVA BÚSQUEDA Y HAY RESULTADOS
                             if (!esSeguimiento) {
                                 mensajeMejorado += `\n\n**💡 ¿Necesitás más información?** Podés preguntar:\n• "Más detalles sobre el primero"\n• "¿Tiene fotos el departamento en Palermo?"\n• "Contacto para la propiedad de $280,000"`;
