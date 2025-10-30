@@ -921,6 +921,12 @@ async def chat(request: ChatRequest):
 
         # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
         if es_seguimiento_final and contexto_anterior and contexto_anterior.get('resultados'):
+            print("🚨 VERIFICACIÓN CRÍTICA - Propiedades en contexto:")
+            for i, prop in enumerate(contexto_anterior['resultados']):
+                print(f"   {i+1}. {prop.get('title', 'N/A')} - ${prop.get('price', 'N/A')}")
+            
+            
+            
             propiedades_contexto = contexto_anterior['resultados']
             
             # Crear string con todos los detalles de las propiedades
@@ -945,20 +951,21 @@ async def chat(request: ChatRequest):
         """
             
             prompt = f"""
-            Eres un asistente inmobiliario especializado. El usuario está haciendo una pregunta de seguimiento sobre propiedades mostradas anteriormente.
-            
-            CONTEXTO COMPLETO DE LAS PROPIEDADES:
+            ERES UN ASISTENTE INMOBILIARIO. El usuario está haciendo una pregunta de seguimiento SOBRE LA PROPIEADAD ESPECÍFICA que se mostró anteriormente.
+
+            INFORMACIÓN EXACTA DE LA PROPIEDAD:
             {detalles_propiedades}
-            
+
             PREGUNTA ACTUAL DEL USUARIO: "{user_text}"
-            
-            INSTRUCCIONES ESPECÍFICAS:
-            1. Responde específicamente con TODOS los detalles disponibles de las propiedades del contexto
-            2. NO preguntes qué detalles quiere - DALE directamente todos los detalles que tengas
-            3. Sé concreto, específico y proporciona información completa
-            4. {style_hint}
-            5. {contexto_dinamico}
+
+            INSTRUCCIONES ESTRICTAS:
+            1. Responde EXCLUSIVAMENTE sobre la propiedad mostrada arriba
+            2. Proporciona TODOS los detalles disponibles de esa propiedad específica
+            3. NO menciones otras propiedades
+            4. NO preguntes qué detalles quiere - DALE directamente toda la información
+            5. {style_hint}
             """
+            
             print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
         else:
             # Prompt normal para nueva búsqueda
