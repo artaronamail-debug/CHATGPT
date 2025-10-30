@@ -576,31 +576,62 @@
         }
 
         // Función para detectar si es una pregunta de seguimiento
+        // Función para detectar si es una pregunta de seguimiento
         function esPreguntaSeguimiento(mensaje) {
             if (!contextoActual.resultados || contextoActual.resultados.length === 0) {
                 return false;
             }
             
-            const palabrasSeguimiento = [
-                'más', 'mas', 'detalles', 'características', 'caracteristicas', 'precio', 
-                'ubicación', 'ubicacion', 'contacto', 'fotos', 'este', 'esta', 'ese', 'esa',
-                'el primero', 'el segundo', 'la primera', 'la segunda', 'primero', 'segundo',
-                'información', 'informacion', 'dime', 'cuéntame', 'cuentame', 'hablame', 'háblame'
-            ];
-            
             const mensajeLower = mensaje.toLowerCase().trim();
             
-            // Detectar patrones de seguimiento
-            const patronesSeguimiento = [
-                /más (información|informacion|detalles|data)/i,
-                /(dime|cuéntame|cuentame|háblame|hablame) (más|mas)/i,
-                /(el|la) (primero|primera|segundo|segunda)/i,
-                /(este|esta|ese|esa) (propiedad|departamento|casa|ph|terreno)/i,
-                /(tiene|tienen) (fotos|imágenes|imagenes|contacto)/i
+            // Palabras clave más amplias para seguimiento
+            const palabrasSeguimiento = [
+                'más', 'mas', 'detalles', 'características', 'caracteristicas', 'información', 'informacion',
+                'precio', 'ubicación', 'ubicacion', 'contacto', 'fotos', 'imágenes', 'imagenes',
+                'este', 'esta', 'ese', 'esa', 'este', 'esta',
+                'primero', 'primera', 'segundo', 'segunda', 'tercero', 'tercera',
+                'el primero', 'el segundo', 'la primera', 'la segunda',
+                'dime', 'cuéntame', 'cuentame', 'háblame', 'hablame', 'decime',
+                'me interesa', 'quiero saber', 'necesito saber'
             ];
             
-            return palabrasSeguimiento.some(palabra => mensajeLower.includes(palabra)) ||
-                patronesSeguimiento.some(patron => patron.test(mensajeLower));
+            // Patrones más flexibles para seguimiento
+            const patronesSeguimiento = [
+                /(más|mas)\s+(información|informacion|detalles|data|info)/i,
+                /(dime|cuéntame|cuentame|háblame|hablame|decime)\s+(más|mas|algo)/i,
+                /(el|la)\s+(primero|primera|segundo|segunda|tercero|tercera)/i,
+                /(este|esta|ese|esa)\s+(propiedad|departamento|casa|ph|terreno|inmueble)/i,
+                /(tiene|tienen|tiene|tienen)\s+(fotos|imágenes|imagenes|contacto|información|informacion)/i,
+                /(me interesa|quiero saber|necesito saber)\s+(más|mas)/i,
+                /(más|mas)\s+(sobre|acerca|de)/i,
+                /(detalles|información|informacion)\s+(sobre|acerca|de)/i
+            ];
+            
+            // Verificar palabras clave
+            const tienePalabraClave = palabrasSeguimiento.some(palabra => 
+                mensajeLower.includes(palabra)
+            );
+            
+            // Verificar patrones
+            const tienePatron = patronesSeguimiento.some(patron => 
+                patron.test(mensajeLower)
+            );
+            
+            // También considerar mensajes muy cortos después de una búsqueda
+            const esMensajeCorto = mensajeLower.split(' ').length <= 5;
+            
+            const esSeguimiento = tienePalabraClave || tienePatron || esMensajeCorto;
+            
+            console.log('🔍 Análisis de seguimiento:', {
+                mensaje: mensajeLower,
+                tienePalabraClave,
+                tienePatron, 
+                esMensajeCorto,
+                esSeguimiento,
+                contexto: contextoActual.resultados.length
+            });
+            
+            return esSeguimiento;
         }
         
         
@@ -802,8 +833,12 @@
 
             // DETECTAR SI ES SEGUIMIENTO
             const esSeguimiento = esPreguntaSeguimiento(msg);
-            console.log('🔍 Es seguimiento?', esSeguimiento, 'Contexto:', contextoActual);
-
+            console.log('🔍 Análisis completo:', {
+                mensaje: msg,
+                esSeguimiento: esSeguimiento,
+                contextoResultados: contextoActual.resultados.length,
+                contextoPropiedadFocus: contextoActual.propiedad_focus
+            });
             addMessage(msg, 'user');
             input.value = '';
             button.disabled = true;
