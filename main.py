@@ -920,13 +920,21 @@ async def chat(request: ChatRequest):
             style_hint = "Respondé de forma explicativa, profesional y cálida como si fuera una consulta web."
 
         # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
+ 
+ 
+ 
+# 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
+        
+        
+ # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
         if es_seguimiento_final and contexto_anterior and contexto_anterior.get('resultados'):
-                # 👇 AGREGAR VERIFICACIÓN DE SEGURIDAD
+            # 👇 AGREGAR VERIFICACIÓN DE SEGURIDAD
             propiedades_contexto = contexto_anterior.get('resultados', [])
             
             if not propiedades_contexto:
                 print("⚠️ Contexto vacío - usando prompt normal")
                 prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
+            
             else:
                 print(f"🎯 Propiedades en contexto: {len(propiedades_contexto)}")
                 
@@ -942,10 +950,11 @@ async def chat(request: ChatRequest):
                 if not propiedad_especifica and propiedades_contexto:
                     propiedad_especifica = propiedades_contexto[0]
                 
-        if propiedad_especifica:
-            print(f"🎯 PROPIEDAD ESPECÍFICA SELECCIONADA: {propiedad_especifica.get('title')}")
-            
-            detalles_propiedad = f"""
+                # 👇 DETERMINAR QUÉ PROMPT USAR BASADO EN LA PROPIEDAD ESPECÍFICA
+                if propiedad_especifica:
+                    print(f"🎯 PROPIEDAD ESPECÍFICA SELECCIONADA: {propiedad_especifica.get('title')}")
+                    
+                    detalles_propiedad = f"""
         PROPIEDAD ESPECÍFICA:
         - Título: {propiedad_especifica.get('title', 'N/A')}
         - Precio: ${propiedad_especifica.get('price', 'N/A')}
@@ -964,8 +973,8 @@ async def chat(request: ChatRequest):
         - Expensas: {propiedad_especifica.get('expensas', 'N/A')}
         - Estado: {propiedad_especifica.get('estado', 'N/A')}
         """
-            
-            prompt = f"""
+                    
+                    prompt = f"""
         ERES UN ASISTENTE INMOBILIARIO. El usuario está preguntando específicamente sobre ESTA propiedad:
 
         {detalles_propiedad}
@@ -982,13 +991,19 @@ async def chat(request: ChatRequest):
 
         RESPONDE CON TODOS LOS DETALLES:
         """
-            print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
+                    print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
+                
+                else:
+                    # Prompt normal para nueva búsqueda
+                    prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
+                    print("🧠 Prompt normal enviado a Gemini")
+
+        # 👇 SI NO ES SEGUIMIENTO, USAR PROMPT NORMAL
         else:
-            # 👇 CORRECCIÓN: Este else debe estar al mismo nivel que el if principal
-            # Prompt normal para nueva búsqueda
             prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
-            print("🧠 Prompt normal enviado a Gemini")            
-        
+            print("🧠 Prompt normal enviado a Gemini (no es seguimiento)")
+            
+                        
         metrics.increment_gemini_calls()
         answer = call_gemini_with_rotation(prompt)
         
