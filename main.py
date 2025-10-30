@@ -942,10 +942,10 @@ async def chat(request: ChatRequest):
                 if not propiedad_especifica and propiedades_contexto:
                     propiedad_especifica = propiedades_contexto[0]
                 
-                if propiedad_especifica:
-                    print(f"🎯 PROPIEADAD ESPECÍFICA SELECCIONADA: {propiedad_especifica.get('title')}")
-                    
-                    detalles_propiedad = f"""
+        if propiedad_especifica:
+            print(f"🎯 PROPIEDAD ESPECÍFICA SELECCIONADA: {propiedad_especifica.get('title')}")
+            
+            detalles_propiedad = f"""
         PROPIEDAD ESPECÍFICA:
         - Título: {propiedad_especifica.get('title', 'N/A')}
         - Precio: ${propiedad_especifica.get('price', 'N/A')}
@@ -964,8 +964,8 @@ async def chat(request: ChatRequest):
         - Expensas: {propiedad_especifica.get('expensas', 'N/A')}
         - Estado: {propiedad_especifica.get('estado', 'N/A')}
         """
-                    
-                    prompt = f"""
+            
+            prompt = f"""
         ERES UN ASISTENTE INMOBILIARIO. El usuario está preguntando específicamente sobre ESTA propiedad:
 
         {detalles_propiedad}
@@ -982,16 +982,12 @@ async def chat(request: ChatRequest):
 
         RESPONDE CON TODOS LOS DETALLES:
         """
-                    print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
-                else:
-                    # Prompt normal para nueva búsqueda
-                    prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
-                    print("🧠 Prompt normal enviado a Gemini")
+            print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
         else:
-            # 👇 ESTE ES EL ELSE QUE FALTA - para cuando NO hay contexto de seguimiento
+            # 👇 CORRECCIÓN: Este else debe estar al mismo nivel que el if principal
+            # Prompt normal para nueva búsqueda
             prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
-            print("🧠 Prompt normal enviado a Gemini")
-                
+            print("🧠 Prompt normal enviado a Gemini")            
         
         metrics.increment_gemini_calls()
         answer = call_gemini_with_rotation(prompt)
