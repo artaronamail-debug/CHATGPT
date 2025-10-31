@@ -306,88 +306,95 @@ def cargar_propiedades_a_db():
         import traceback
         traceback.print_exc()
 
-def verificar_carga_propiedades():
-    """Verifica que las propiedades se cargaron correctamente en la base de datos - VERSIÓN GENERAL"""
+def cargar_propiedades_a_db():
+    """Carga las propiedades del JSON a la base de datos SQLite con mapeo correcto de campos y tipos"""
     try:
+        propiedades = cargar_propiedades_json("properties.json")
+        if not propiedades:
+            print("❌ No hay propiedades para cargar")
+            return
+        
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
-        # Contar total de propiedades cargadas
-        cur.execute("SELECT COUNT(*) FROM properties")
-        total_propiedades = cur.fetchone()[0]
+        # Limpiar tabla existente
+        cur.execute("DELETE FROM properties")
         
-        print(f"📊 DIAGNÓSTICO GENERAL - Total propiedades en DB: {total_propiedades}")
-        
-        # Verificar distribución por BARRIO (automáticamente de la DB)
-        print("\n📍 Distribución por barrio:")
-        cur.execute("SELECT neighborhood, COUNT(*) FROM properties GROUP BY neighborhood ORDER BY COUNT(*) DESC")
-        for barrio, count in cur.fetchall():
-            print(f"   {barrio}: {count} propiedades")
-        
-        # Verificar distribución por TIPO
-        print("\n🏠 Distribución por tipo de propiedad:")
-        cur.execute("SELECT tipo, COUNT(*) FROM properties GROUP BY tipo ORDER BY COUNT(*) DESC")
-        for tipo, count in cur.fetchall():
-            print(f"   {tipo}: {count} propiedades")
-        
-        # Verificar distribución por OPERACIÓN
-        print("\n💰 Distribución por operación:")
-        cur.execute("SELECT operacion, COUNT(*) FROM properties GROUP BY operacion ORDER BY COUNT(*) DESC")
-        for operacion, count in cur.fetchall():
-            print(f"   {operacion}: {count} propiedades")
-        
-        # Verificar combinaciones CRÍTICAS (sin hardcodear barrios)
-        print("\n🔍 Combinaciones importantes encontradas:")
-        
-        # Terrenos en cualquier barrio
-        cur.execute('''
-            SELECT neighborhood, COUNT(*) 
-            FROM properties 
-            WHERE tipo = 'terreno' 
-            GROUP BY neighborhood
-        ''')
-        terrenos = cur.fetchall()
-        if terrenos:
-            print("   🏞️ Terrenos disponibles:")
-            for barrio, count in terrenos:
-                print(f"      {barrio}: {count} terreno(s)")
-        else:
-            print("   ❌ No hay terrenos en la base de datos")
-            
-        # Casas en cualquier barrio  
-        cur.execute('''
-            SELECT neighborhood, COUNT(*) 
-            FROM properties 
-            WHERE tipo = 'casa' 
-            GROUP BY neighborhood
-        ''')
-        casas = cur.fetchall()
-        if casas:
-            print("   🏡 Casas disponibles:")
-            for barrio, count in casas:
-                print(f"      {barrio}: {count} casa(s)")
+        # Insertar nuevas propiedades con CONVERSIÓN DE TIPOS
+        propiedades_cargadas = 0
+        for prop in propiedades:
+            try:
+                # 🔥 CONVERTIR TIPOS DE DATOS
+                id_prop = prop.get('id_temporal') or f"prop_{propiedades_cargadas}"
+                titulo = str(prop.get('titulo', ''))
+                barrio = str(prop.get('barrio', ''))
                 
-        # PHs en cualquier barrio
-        cur.execute('''
-            SELECT neighborhood, COUNT(*) 
-            FROM properties 
-            WHERE tipo = 'ph' 
-            GROUP BY neighborhood
-        ''')
-        phs = cur.fetchall()
-        if phs:
-            print("   🏘️ PHs disponibles:")
-            for barrio, count in phs:
-                print(f"      {barrio}: {count} PH(s)")
+                # Convertir precio a float
+                precio_str = str(prop.get('precio', '0')).replace(',', '.')
+                precio = float(precio_str) if precio_str.replace('.', '').isdigit() else 0.0
+                
+                # Convertir ambientes a int
+                ambientes_str = str(prop.get('ambientes', '0'))
+                ambientes = int(ambientes_str) if ambientes_str.isdigit() else 0
+                
+                # Convertir metros a float
+                metros_str = str(prop.get('metros', '0')).replace(',', '.')
+                metros = float(metros_str) if metros_str.replace('.', '').isdigit() else 0.0
+                
+                # Convertir expensas a float
+                expensas_str = str(prop.get('expensas', '0')).replace(',', '.')
+                expensas = float(expensas_str) if expensas_str.replace('.', '').isdigit() else 0.0
+                
+                # Convertir antiguedad a int
+                antiguedad_str = str(prop.get('antiguedad', '0'))
+                antiguedad = int(antiguedad_str) if antiguedad_str.isdigit() else 0
+                
+                # Resto de campos como texto
+                descripcion = str(prop.get('descripcion', ''))
+                operacion = str(prop.get('operacion', ''))
+                tipo = str(prop.get('tipo', ''))
+                direccion = str(prop.get('direccion', ''))
+                estado = str(prop.get('estado', ''))
+                orientacion = str(prop.get('orientacion', ''))
+                piso = str(prop.get('piso', ''))
+                amenities = str(prop.get('amenities', ''))
+                cochera = str(prop.get('cochera', ''))
+                balcon = str(prop.get('balcon', ''))
+                pileta = str(prop.get('pileta', ''))
+                acepta_mascotas = str(prop.get('acepta_mascotas', ''))
+                aire_acondicionado = str(prop.get('aire_acondicionado', ''))
+                info_multimedia = str(prop.get('info_multimedia', ''))
+                
+                cur.execute('''
+                    INSERT INTO properties (
+                        id, title, neighborhood, price, rooms, sqm, description, 
+                        operacion, tipo, direccion, antiguedad, estado, orientacion, 
+                        piso, expensas, amenities, cochera, balcon, pileta, 
+                        acepta_mascotas, aire_acondicionado, info_multimedia
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    id_prop, titulo, barrio, precio, ambientes, metros, descripcion,
+                    operacion, tipo, direccion, antiguedad, estado, orientacion,
+                    piso, expensas, amenities, cochera, balcon, pileta,
+                    acepta_mascotas, aire_acondicionado, info_multimedia
+                ))
+                propiedades_cargadas += 1
+                print(f"✅ Cargada: {titulo}")
+                
+            except Exception as e:
+                print(f"⚠️ Error cargando propiedad {prop.get('titulo', 'N/A')}: {e}")
+                import traceback
+                traceback.print_exc()
+                continue
         
+        conn.commit()
         conn.close()
-        
-        print(f"\n✅ Verificación completada. Base de datos lista para búsquedas en TODOS los barrios.")
+        print(f"✅ {propiedades_cargadas}/{len(propiedades)} propiedades cargadas exitosamente")
         
     except Exception as e:
-        print(f"❌ Error en verificación general: {e}")
-        
-
+        print(f"❌ Error cargando propiedades a DB: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def initialize_databases():
