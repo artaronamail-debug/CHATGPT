@@ -464,7 +464,7 @@ def initialize_databases():
         # 🔥 VERIFICACIÓN COMPLETA (AGREGAR ESTA LÍNEA)
         
         print("✅ Bases de datos inicializadas correctamente con nuevo esquema")
-        verificar_carga_propiedades()
+         #verificar_carga_propiedades()
     except Exception as e:
         print(f"❌ Error inicializando bases de datos: {e}")
 
