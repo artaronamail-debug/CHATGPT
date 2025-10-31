@@ -237,9 +237,11 @@ def get_cached_results(filters: Dict[str, Any]) -> Optional[List[Dict]]:
         return cached['results']
     return None
 
+
+
 # ✅ FUNCIONES MEJORADAS
 def cargar_propiedades_a_db():
-    """Carga las propiedades del JSON a la base de datos SQLite"""
+    """Carga las propiedades del JSON a la base de datos SQLite con mapeo correcto de campos"""
     try:
         propiedades = cargar_propiedades_json("properties.json")
         if not propiedades:
@@ -252,42 +254,139 @@ def cargar_propiedades_a_db():
         # Limpiar tabla existente
         cur.execute("DELETE FROM properties")
         
-        # Insertar nuevas propiedades
+        # Insertar nuevas propiedades con MAPEO CORRECTO
+        propiedades_cargadas = 0
         for prop in propiedades:
-            cur.execute('''
-                INSERT INTO properties (id, title, neighborhood, price, rooms, sqm, description, operacion, tipo, direccion, antiguedad, estado, orientacion, piso, expensas, amenities, cochera, balcon, pileta, acepta_mascotas, aire_acondicionado, info_multimedia)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                prop.get('id'),
-                prop.get('title'),
-                prop.get('neighborhood'),
-                prop.get('price'),
-                prop.get('rooms'),
-                prop.get('sqm'),
-                prop.get('description'),
-                prop.get('operacion'),
-                prop.get('tipo'),
-                prop.get('direccion'),
-                prop.get('antiguedad'),
-                prop.get('estado'),
-                prop.get('orientacion'),
-                prop.get('piso'),
-                prop.get('expensas'),
-                prop.get('amenities'),
-                prop.get('cochera'),
-                prop.get('balcon'),
-                prop.get('pileta'),
-                prop.get('acepta_mascotas'),
-                prop.get('aire_acondicionado'),
-                prop.get('info_multimedia')
-            ))
+            try:
+                cur.execute('''
+                    INSERT INTO properties (
+                        id, title, neighborhood, price, rooms, sqm, description, 
+                        operacion, tipo, direccion, antiguedad, estado, orientacion, 
+                        piso, expensas, amenities, cochera, balcon, pileta, 
+                        acepta_mascotas, aire_acondicionado, info_multimedia
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    prop.get('id_temporal'),
+                    prop.get('titulo'),
+                    prop.get('barrio'), 
+                    prop.get('precio'),
+                    prop.get('ambientes'),
+                    prop.get('metros'),
+                    prop.get('descripcion'),
+                    prop.get('operacion'),
+                    prop.get('tipo'),
+                    prop.get('direccion'),
+                    prop.get('antiguedad'),
+                    prop.get('estado'),
+                    prop.get('orientacion'),
+                    prop.get('piso'),
+                    prop.get('expensas'),
+                    prop.get('amenities'),
+                    prop.get('cochera'),
+                    prop.get('balcon'),
+                    prop.get('pileta'),
+                    prop.get('acepta_mascotas'),
+                    prop.get('aire_acondicionado'),
+                    prop.get('info_multimedia')
+                ))
+                propiedades_cargadas += 1
+            except Exception as e:
+                print(f"⚠️ Error cargando propiedad {prop.get('titulo')}: {e}")
+                continue
         
         conn.commit()
         conn.close()
-        print(f"✅ {len(propiedades)} propiedades cargadas en la base de datos")
+        print(f"✅ {propiedades_cargadas}/{len(propiedades)} propiedades cargadas en la base de datos")
+        
+        # 🔥 EJECUTAR VERIFICACIÓN GENERAL
+        verificar_carga_propiedades()
         
     except Exception as e:
         print(f"❌ Error cargando propiedades a DB: {e}")
+        import traceback
+        traceback.print_exc()
+
+def verificar_carga_propiedades():
+    """Verifica que las propiedades se cargaron correctamente en la base de datos - VERSIÓN GENERAL"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        # Contar total de propiedades cargadas
+        cur.execute("SELECT COUNT(*) FROM properties")
+        total_propiedades = cur.fetchone()[0]
+        
+        print(f"📊 DIAGNÓSTICO GENERAL - Total propiedades en DB: {total_propiedades}")
+        
+        # Verificar distribución por BARRIO (automáticamente de la DB)
+        print("\n📍 Distribución por barrio:")
+        cur.execute("SELECT neighborhood, COUNT(*) FROM properties GROUP BY neighborhood ORDER BY COUNT(*) DESC")
+        for barrio, count in cur.fetchall():
+            print(f"   {barrio}: {count} propiedades")
+        
+        # Verificar distribución por TIPO
+        print("\n🏠 Distribución por tipo de propiedad:")
+        cur.execute("SELECT tipo, COUNT(*) FROM properties GROUP BY tipo ORDER BY COUNT(*) DESC")
+        for tipo, count in cur.fetchall():
+            print(f"   {tipo}: {count} propiedades")
+        
+        # Verificar distribución por OPERACIÓN
+        print("\n💰 Distribución por operación:")
+        cur.execute("SELECT operacion, COUNT(*) FROM properties GROUP BY operacion ORDER BY COUNT(*) DESC")
+        for operacion, count in cur.fetchall():
+            print(f"   {operacion}: {count} propiedades")
+        
+        # Verificar combinaciones CRÍTICAS (sin hardcodear barrios)
+        print("\n🔍 Combinaciones importantes encontradas:")
+        
+        # Terrenos en cualquier barrio
+        cur.execute('''
+            SELECT neighborhood, COUNT(*) 
+            FROM properties 
+            WHERE tipo = 'terreno' 
+            GROUP BY neighborhood
+        ''')
+        terrenos = cur.fetchall()
+        if terrenos:
+            print("   🏞️ Terrenos disponibles:")
+            for barrio, count in terrenos:
+                print(f"      {barrio}: {count} terreno(s)")
+        else:
+            print("   ❌ No hay terrenos en la base de datos")
+            
+        # Casas en cualquier barrio  
+        cur.execute('''
+            SELECT neighborhood, COUNT(*) 
+            FROM properties 
+            WHERE tipo = 'casa' 
+            GROUP BY neighborhood
+        ''')
+        casas = cur.fetchall()
+        if casas:
+            print("   🏡 Casas disponibles:")
+            for barrio, count in casas:
+                print(f"      {barrio}: {count} casa(s)")
+                
+        # PHs en cualquier barrio
+        cur.execute('''
+            SELECT neighborhood, COUNT(*) 
+            FROM properties 
+            WHERE tipo = 'ph' 
+            GROUP BY neighborhood
+        ''')
+        phs = cur.fetchall()
+        if phs:
+            print("   🏘️ PHs disponibles:")
+            for barrio, count in phs:
+                print(f"      {barrio}: {count} PH(s)")
+        
+        conn.close()
+        
+        print(f"\n✅ Verificación completada. Base de datos lista para búsquedas en TODOS los barrios.")
+        
+    except Exception as e:
+        print(f"❌ Error en verificación general: {e}")
+        
 
 
 
@@ -355,10 +454,15 @@ def initialize_databases():
 
         # ✅ CARGAR PROPIEDADES DESDE JSON
         cargar_propiedades_a_db()
+        # 🔥 VERIFICACIÓN COMPLETA (AGREGAR ESTA LÍNEA)
         
         print("✅ Bases de datos inicializadas correctamente con nuevo esquema")
+        verificar_carga_propiedades()
     except Exception as e:
         print(f"❌ Error inicializando bases de datos: {e}")
+
+
+
 
 def cargar_propiedades_json(filename):
     try:
@@ -422,6 +526,9 @@ def query_properties_cached(filters_json: str):
     filters = json.loads(filters_json) if filters_json else {}
     return query_properties(filters)
 
+
+
+
 def query_properties(filters=None):
     try:
         # Verificar cache primero
@@ -444,34 +551,42 @@ def query_properties(filters=None):
             if filters.get("neighborhood"):
                 where_clauses.append("LOWER(neighborhood) LIKE LOWER(?)")
                 params.append(f"%{filters['neighborhood']}%")
+                print(f"🔍 Filtro barrio aplicado: {filters['neighborhood']}")  # <-- AGREGAR ESTE PRINT
                 
             if filters.get("min_price") is not None:
                 where_clauses.append("price >= ?")
                 params.append(filters["min_price"])
+                print(f"🔍 Filtro precio mínimo: {filters['min_price']}")  # <-- AGREGAR ESTE PRINT
                 
             if filters.get("max_price") is not None:
                 where_clauses.append("price <= ?")
                 params.append(filters["max_price"])
+                print(f"🔍 Filtro precio máximo: {filters['max_price']}")  # <-- AGREGAR ESTE PRINT
                 
             if filters.get("operacion"):
                 where_clauses.append("LOWER(operacion) LIKE LOWER(?)")
                 params.append(f"%{filters['operacion']}%")
+                print(f"🔍 Filtro operación: {filters['operacion']}")  # <-- AGREGAR ESTE PRINT
             
             if filters.get("min_rooms") is not None:
                 where_clauses.append("rooms >= ?")
                 params.append(filters["min_rooms"])
+                print(f"🔍 Filtro ambientes: {filters['min_rooms']}")  # <-- AGREGAR ESTE PRINT
                 
             if filters.get("tipo"):
                 where_clauses.append("LOWER(tipo) LIKE LOWER(?)")
                 params.append(f"%{filters['tipo']}%")
+                print(f"🔍 Filtro tipo: {filters['tipo']}")  # <-- AGREGAR ESTE PRINT
                 
             if filters.get("min_sqm") is not None:
                 where_clauses.append("sqm >= ?")
                 params.append(filters["min_sqm"])
+                print(f"🔍 Filtro metros mínimos: {filters['min_sqm']}")  # <-- AGREGAR ESTE PRINT
                 
             if filters.get("max_sqm") is not None:
                 where_clauses.append("sqm <= ?")
                 params.append(filters["max_sqm"])
+                print(f"🔍 Filtro metros máximos: {filters['max_sqm']}")  # <-- AGREGAR ESTE PRINT
                 
             if where_clauses:
                 q += " WHERE " + " AND ".join(where_clauses)
@@ -487,6 +602,14 @@ def query_properties(filters=None):
         
         results = [dict(r) for r in rows]
         
+        # DEBUG: Mostrar qué propiedades se encontraron  # <-- AGREGAR ESTA SECCIÓN
+        if results:
+            print(f"✅ {len(results)} propiedades encontradas:")
+            for prop in results[:3]:  # Mostrar primeras 3
+                print(f"   📍 {prop['title']} - {prop['neighborhood']} - ${prop['price']} - {prop['tipo']}")
+        else:
+            print("❌ No se encontraron propiedades con los filtros aplicados")
+        
         # Almacenar en cache si hay filtros
         if filters and results:
             cache_query_results(filters, results)
@@ -495,6 +618,8 @@ def query_properties(filters=None):
     except Exception as e:
         print(f"❌ Error en query_properties: {e}")
         return []
+    
+    
 
 def build_prompt(user_text, results=None, filters=None, channel="web", style_hint="", property_details=None):
     whatsapp_tone = channel == "whatsapp"
@@ -553,11 +678,21 @@ def log_conversation(user_text, response_text, channel="web", response_time=0.0,
         print(f"❌ Error en log: {e}")
 
 def detect_filters(text_lower: str) -> Dict[str, Any]:
-    """Detecta y extrae filtros del texto del usuario"""
+    """Detecta y extrae filtros del texto del usuario - VERSIÓN GENERAL MEJORADA"""
     filters = {}
     
-    # Mapeo de palabras clave a filtros
-    barrio_keywords = ['palermo', 'recoleta', 'belgrano', 'almagro', 'caballito', 'microcentro', 'balvanera']
+    # Lista COMPLETA de barrios (puede expandirse dinámicamente)
+    barrio_keywords = [
+        'palermo', 'recoleta', 'belgrano', 'almagro', 'caballito',
+        'microcentro', 'balvanera', 'villa crespo', 'san telmo', 'boca',
+        'nuñez', 'monserrat', 'constitución', 'flores', 'parque chas',
+        'villa urquiza', 'boedo', 'villa luro', 'villa devoto', 'villa soldati',
+        'villa ramos mejía', 'liniers', 'mataderos', 'velez sarsfield', 'versalles',
+        'paternal', 'chacarita', 'agronomia', 'villa pueyrredón', 'saavedra',
+        'coghlan', 'belgrano r', 'belgrano c', 'nuñez', 'olivos', 'san isidro',
+        'vicente lopez', 'puerto madero', 'colegiales', 'barrio norte'
+    ]
+    
     operacion_keywords = {
         'alquiler': 'alquiler',
         'alquilar': 'alquiler', 
@@ -567,6 +702,7 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
         'compra': 'venta',
         'vender': 'venta'
     }
+    
     tipo_keywords = {
         'departamento': 'departamento',
         'depto': 'departamento',
@@ -574,31 +710,33 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
         'ph': 'ph',
         'casaquinta': 'casaquinta',
         'terreno': 'terreno',
-        'terrenos': 'terreno'
+        'terrenos': 'terreno',
+        'lote': 'terreno',
+        'lotes': 'terreno'
     }
     
-    # Detectar barrio por palabras clave exactas
-    for barrio in barrio_keywords:
-        if barrio in text_lower:
-            filters["neighborhood"] = barrio
-            print(f"📍 Barrio detectado (keyword): {filters['neighborhood']}")
-            break
-    
-    # Detectar operación
-    for keyword, operacion in operacion_keywords.items():
-        if keyword in text_lower:
-            filters["operacion"] = operacion
-            print(f"🏢 Operación detectada: {filters['operacion']}")
-            break
-    
-    # Detectar tipo de propiedad
+    # 🔥 DETECCIÓN MEJORADA DE TIPO (GENERAL)
     for keyword, tipo in tipo_keywords.items():
         if keyword in text_lower:
             filters["tipo"] = tipo
             print(f"🏠 Tipo detectado: {filters['tipo']}")
             break
     
-    # Extraer barrio con patrones regex (como respaldo)
+    # Detectar barrio por palabras clave exactas (GENERAL)
+    for barrio in barrio_keywords:
+        if barrio in text_lower:
+            filters["neighborhood"] = barrio
+            print(f"📍 Barrio detectado: {filters['neighborhood']}")
+            break
+    
+    # Detectar operación (GENERAL)
+    for keyword, operacion in operacion_keywords.items():
+        if keyword in text_lower:
+            filters["operacion"] = operacion
+            print(f"🏢 Operación detectada: {filters['operacion']}")
+            break
+    
+    # Extraer barrio con patrones regex (GENERAL - para cualquier barrio)
     if "neighborhood" not in filters:
         barrio_patterns = [
             r"en ([a-zA-Záéíóúñ ]+)",
@@ -610,18 +748,22 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
         for pattern in barrio_patterns:
             m_barrio = re.search(pattern, text_lower)
             if m_barrio:
-                potential_neighborhood = m_barrio.group(1).strip()
-                if potential_neighborhood not in operacion_keywords:
+                potential_neighborhood = m_barrio.group(1).strip().lower()
+                # Verificar que no sea una palabra de operación o tipo
+                if (potential_neighborhood not in operacion_keywords and 
+                    potential_neighborhood not in tipo_keywords and
+                    len(potential_neighborhood) > 2):
                     filters["neighborhood"] = potential_neighborhood
                     print(f"📍 Barrio detectado (regex): {filters['neighborhood']}")
                     break
     
-    # Extraer precios
+    # 🔥 DETECCIÓN MEJORADA DE PRECIOS (GENERAL)
     price_patterns = [
         r"hasta \$?\s*([0-9\.]+)",
-        r"máximo \$?\s*([0-9\.]+)",
+        r"máximo \$?\s*([0-9\.]+)", 
         r"precio.*?\$?\s*([0-9\.]+)",
-        r"menos de \$?\s*([0-9\.]+)"
+        r"menos de \$?\s*([0-9\.]+)",
+        r"\$?\s*([0-9\.]+)\s*pesos"
     ]
     
     for pattern in price_patterns:
@@ -631,19 +773,30 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
             print(f"💰 Precio máximo detectado: {filters['max_price']}")
             break
     
-    # Extraer precio mínimo
+    # Precio mínimo (GENERAL)
     m_min_price = re.search(r"desde \$?\s*([0-9\.]+)", text_lower)
     if m_min_price:
         filters["min_price"] = int(m_min_price.group(1).replace('.', ''))
         print(f"💰 Precio mínimo detectado: {filters['min_price']}")
     
-    # Extraer ambientes
+    # Ambientes (GENERAL)
     m_rooms = re.search(r"(\d+)\s*amb", text_lower)
     if m_rooms:
         filters["min_rooms"] = int(m_rooms.group(1))
         print(f"🚪 Ambientes detectados: {filters['min_rooms']}")
 
+    # Metros cuadrados (GENERAL)
+    m_sqm = re.search(r"(\d+)\s*m2", text_lower) or re.search(r"(\d+)\s*metros", text_lower)
+    if m_sqm:
+        filters["min_sqm"] = int(m_sqm.group(1))
+        print(f"📏 Metros cuadrados detectados: {filters['min_sqm']}")
+
+    print(f"🎯 Filtros finales detectados: {filters}")
     return filters
+
+
+
+
 
 # ✅ ENDPOINTS MEJORADOS
 @app.get("/status")
@@ -826,7 +979,7 @@ async def chat(request: ChatRequest):
             'más', 'mas', 'detalles', 'brindar', 'brindame', 'dime', 'cuéntame', 
             'cuentame', 'información', 'informacion', 'características', 'caracteristicas',
             'este', 'esta', 'ese', 'esa', 'primero', 'primera', 'segundo', 'segunda',
-            'propiedad', 'departamento', 'casa', 'ph'
+            'propiedad', 'departamento', 'casa', 'ph', 'casaquinta', 'terreno', 'terrenos'
         ]
 
         es_seguimiento_backend = any(palabra in text_lower for palabra in palabras_seguimiento_backend)

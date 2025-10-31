@@ -3,7 +3,7 @@ import json
 import re
 from datetime import datetime
 
-def excel_a_json_avanzado(archivo_excel, archivo_salida='propiedades.json'):
+def excel_a_json_avanzado(archivo_excel, archivo_salida='properties.json'):
     """
     Versión mejorada para convertir Excel a JSON con mejor manejo de datos
     """

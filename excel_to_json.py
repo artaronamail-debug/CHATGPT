@@ -1,218 +1,255 @@
-#!/usr/bin/env python3
-"""
-SCRIPT UNIVERSAL - Convierte CUALQUIER Excel de propiedades a JSON
-"""
-
 import pandas as pd
 import json
-import os
+import re
+from datetime import datetime
 
-def excel_a_json_universal():
-    print("🔄 CONVIRTIENDO Excel a JSON (Modo Universal)")
-    print("=" * 50)
-    
-    # Archivos
-    excel_file = "propiedades.xlsx"
-    json_file = "properties.json"
-    
-    # 1. Verificar que existe el Excel
-    if not os.path.exists(excel_file):
-        print(f"❌ ERROR: No encuentro '{excel_file}'")
-        print("💡 Asegúrate de que el archivo esté en la misma carpeta")
-        input("Presiona Enter para salir...")
-        return False
+def excel_a_json_avanzado(archivo_excel, archivo_salida='properties.json'):
+    """
+    Versión mejorada para convertir Excel a JSON con mejor manejo de datos
+    """
     
     try:
-        # 2. Leer el Excel (hoja principal)
-        print(f"📖 Leyendo {excel_file}...")
+        # Leer el archivo Excel
+        df = pd.read_excel(archivo_excel)
         
-        # Intentar leer la primera hoja
-        df = pd.read_excel(excel_file)
-        
-        print(f"✅ Excel leído correctamente")
-        print(f"📊 Filas: {len(df)}")
-        print(f"📋 Columnas encontradas: {list(df.columns)}")
-        print()
-        
-        # 3. Mostrar mapeo de columnas
-        print("🔍 MAPEO AUTOMÁTICO DE COLUMNAS:")
-        print("-" * 30)
-        
-        mapeo_columnas = {
-            'titulo': ['titulo', 'title', 'nombre', 'propiedad'],
-            'barrio': ['barrio', 'neighborhood', 'zona', 'ubicacion'],
-            'precio': ['precio', 'price', 'valor', 'costo'],
-            'ambientes': ['ambientes', 'rooms', 'habitaciones', 'dormitorios'],
-            'metros': ['metros', 'sqm', 'metros_cuadrados', 'superficie'],
-            'operacion': ['operacion', 'tipo_operacion', 'venta_alquiler'],
-            'tipo': ['tipo', 'tipo_propiedad', 'categoria'],
-            'descripcion': ['descripcion', 'description', 'detalles']
-        }
-        
-        columnas_mapeadas = {}
-        
-        for columna in df.columns:
-            col_lower = str(columna).lower()
-            for clave, posibles in mapeo_columnas.items():
-                if any(p in col_lower for p in posibles):
-                    columnas_mapeadas[clave] = columna
-                    print(f"   ✅ '{columna}' → {clave}")
-                    break
-            else:
-                print(f"   📝 '{columna}' → (campo adicional)")
-                columnas_mapeadas[columna] = columna
-        
-        print()
-        
-        # 4. Convertir a JSON
-        propiedades = []
-        
-        for index, row in df.iterrows():
-            propiedad = {
-                "id": index + 1,
-                "title": obtener_valor(row, columnas_mapeadas, 'titulo', f"Propiedad {index + 1}"),
-                "neighborhood": obtener_valor(row, columnas_mapeadas, 'barrio', '').lower(),
-                "price": float(obtener_valor(row, columnas_mapeadas, 'precio', 0)),
-                "rooms": int(obtener_valor(row, columnas_mapeadas, 'ambientes', 1)),
-                "sqm": float(obtener_valor(row, columnas_mapeadas, 'metros', 0)),
-                "description": obtener_valor(row, columnas_mapeadas, 'descripcion', ''),
-                "operacion": obtener_valor(row, columnas_mapeadas, 'operacion', 'alquiler').lower(),
-                "tipo": obtener_valor(row, columnas_mapeadas, 'tipo', 'departamento').lower(),
-            }
-            
-            # Agregar TODAS las columnas adicionales
-            for columna in df.columns:
-                if columna not in columnas_mapeadas.values() or columna not in mapeo_columnas.keys():
-                    valor = row[columna]
-                    if not pd.isna(valor):
-                        propiedad[str(columna).lower()] = str(valor)
-            
-            propiedades.append(propiedad)
-            print(f"   ✅ Procesada: {propiedad['title']}")
-        
-        # 5. GUARDAR JSON (sobrescribe el anterior)
-        print(f"\n💾 Guardando {len(propiedades)} propiedades en {json_file}...")
-        
-        with open(json_file, 'w', encoding='utf-8') as f:
-            json.dump(propiedades, f, ensure_ascii=False, indent=2)
-        
-        # 6. Mostrar resumen
-        print(f"\n🎉 ¡CONVERSIÓN EXITOSA!")
-        print("=" * 30)
-        print(f"📈 Total propiedades: {len(propiedades)}")
-        
-        # Estadísticas simples
-        operaciones = {}
-        barrios = {}
-        for prop in propiedades:
-            op = prop["operacion"]
-            barrio = prop["neighborhood"]
-            operaciones[op] = operaciones.get(op, 0) + 1
-            if barrio:
-                barrios[barrio] = barrios.get(barrio, 0) + 1
-        
-        print(f"🏢 Operaciones: {operaciones}")
-        print(f"📍 Barrios: {len(barrios)} diferentes")
-        
-        # Mostrar primeras 3 propiedades como ejemplo
-        print(f"\n🔍 MUESTRA (primeras 3 propiedades):")
-        for i, prop in enumerate(propiedades[:3]):
-            print(f"   {i+1}. {prop['title']}")
-            print(f"      📍 {prop['neighborhood']} | 🏢 {prop['operacion']} | 💰 ${prop['price']:,.0f}")
-        
-        return True
+        print(f"✅ Excel leído correctamente: {len(df)} registros encontrados")
         
     except Exception as e:
-        print(f"❌ ERROR: {str(e)}")
-        print("💡 ¿El archivo Excel está abierto? Ciérralo e intenta de nuevo.")
-        return False
-
-def obtener_valor(row, mapeo, clave, default):
-    """Obtiene valor de una fila usando el mapeo de columnas"""
-    if clave in mapeo:
-        columna = mapeo[clave]
-        valor = row[columna]
-        if pd.isna(valor):
-            return default
-        return str(valor) if isinstance(default, str) else valor
-    return default
-
-def crear_excel_ejemplo():
-    """Crea un Excel de ejemplo si no existe"""
-    ejemplo_file = "propiedades_ejemplo.xlsx"
+        print(f"❌ Error leyendo el archivo Excel: {e}")
+        return None
     
-    if not os.path.exists(ejemplo_file):
-        print(f"\n📝 Creando Excel de ejemplo: {ejemplo_file}")
-        
-        datos = [
-            {
-                "titulo": "Departamento en Palermo",
-                "barrio": "Palermo",
-                "precio": 250000,
-                "ambientes": 2,
-                "metros": 65,
-                "operacion": "alquiler",
-                "tipo": "departamento",
-                "descripcion": "Hermoso departamento con balcón",
-                "direccion": "Honduras 1234",
-                "expensas": 8000,
-                "cochera": "Sí",
-                "acepta_mascotas": "Sí"
-            },
-            {
-                "titulo": "Casa en Belgrano", 
-                "barrio": "Belgrano",
-                "precio": 450000,
-                "ambientes": 3,
-                "metros": 110,
-                "operacion": "venta",
-                "tipo": "casa",
-                "descripcion": "Casa familiar con jardín",
-                "direccion": "Juramento 5678",
-                "expensas": 0,
-                "cochera": "Sí",
-                "acepta_mascotas": "No"
-            },
-            {
-                "titulo": "PH en Colegiales",
-                "barrio": "Colegiales", 
-                "precio": 180000,
-                "ambientes": 1,
-                "metros": 45,
-                "operacion": "alquiler",
-                "tipo": "ph",
-                "descripcion": "PH acogedor ideal para una persona",
-                "direccion": "Conesa 910",
-                "expensas": 2000,
-                "cochera": "No",
-                "acepta_mascotas": "Sí"
-            }
-        ]
-        
-        df = pd.DataFrame(datos)
-        df.to_excel(ejemplo_file, index=False)
-        print(f"✅ Excel de ejemplo creado: {ejemplo_file}")
-        print("💡 Puedes usar este archivo como referencia")
-
-if __name__ == "__main__":
-    print("🔄 CONVERSOR UNIVERSAL - Excel a JSON")
-    print("=" * 50)
-    print("Este script convierte CUALQUIER Excel de propiedades a JSON")
-    print()
+    # Limpiar nombres de columnas
+    df.columns = [limpiar_nombre_columna(col) for col in df.columns]
     
-    # Crear ejemplo si no hay archivo
-    if not os.path.exists("propiedades.xlsx"):
-        crear_excel_ejemplo()
-        print(f"\n📁 Ahora edita 'propiedades_ejemplo.xlsx' con tus datos")
-        print("   y renómbralo a 'propiedades.xlsx'")
-        input("\nPresiona Enter para salir...")
+    propiedades = []
+    
+    for index, row in df.iterrows():
+        try:
+            propiedad = procesar_fila(row)
+            if propiedad:  # Solo agregar si se procesó correctamente
+                propiedades.append(propiedad)
+        except Exception as e:
+            print(f"⚠️ Error procesando fila {index}: {e}")
+            continue
+    
+    # Guardar JSON
+    try:
+        with open(archivo_salida, 'w', encoding='utf-8') as f:
+            json.dump(propiedades, f, ensure_ascii=False, indent=2)
+        
+        print(f"✅ JSON guardado exitosamente: {archivo_salida}")
+        print(f"📊 Total de propiedades procesadas: {len(propiedades)}")
+        
+    except Exception as e:
+        print(f"❌ Error guardando JSON: {e}")
+        return None
+    
+    return propiedades
+
+def limpiar_nombre_columna(nombre):
+    """Limpia y estandariza nombres de columnas"""
+    if pd.isna(nombre):
+        return "columna_desconocida"
+    
+    nombre_limpio = str(nombre).lower().strip()
+    nombre_limpio = re.sub(r'[^\w\s]', '_', nombre_limpio)  # Reemplazar caracteres especiales
+    nombre_limpio = re.sub(r'\s+', '_', nombre_limpio)  # Reemplazar espacios múltiples
+    return nombre_limpio
+
+def procesar_fila(fila):
+    """Procesa una fila individual del DataFrame"""
+    propiedad = {}
+    
+    for columna, valor in fila.items():
+        if pd.notna(valor) and valor != '':
+            propiedad[columna] = limpiar_valor(valor, columna)
+    
+    # Enriquecer con datos extraídos
+    propiedad = enriquecer_propiedad(propiedad)
+    
+    return propiedad
+
+def limpiar_valor(valor, nombre_columna):
+    """Limpia y convierte valores según el tipo de columna"""
+    
+    # Columnas que deben ser numéricas
+    columnas_numericas = ['precio', 'precio_usd', 'metros', 'metros_cuadrados', 
+                         'superficie', 'ambientes', 'habitaciones', 'dormitorios', 
+                         'banos', 'antiguedad']
+    
+    # Columnas que deben ser texto
+    columnas_texto = ['descripcion', 'direccion', 'barrio', 'localidad', 
+                     'ciudad', 'operacion', 'tipo', 'caracteristicas']
+    
+    nombre_columna_lower = nombre_columna.lower()
+    
+    # Si es numérico
+    if any(col in nombre_columna_lower for col in columnas_numericas):
+        return convertir_a_numero(valor)
+    
+    # Si es texto
+    elif any(col in nombre_columna_lower for col in columnas_texto):
+        return str(valor).strip()
+    
+    # Por defecto, mantener el valor original pero limpiarlo
     else:
-        # Ejecutar conversión
-        success = excel_a_json_universal()
+        if isinstance(valor, str):
+            return valor.strip()
+        return valor
+
+def convertir_a_numero(valor):
+    """Convierte un valor a número, manejando diferentes formatos"""
+    if isinstance(valor, (int, float)):
+        return valor
+    
+    if isinstance(valor, str):
+        # Remover símbolos de moneda, espacios, etc.
+        valor_limpio = re.sub(r'[^\d.,]', '', valor.strip())
         
-        if success:
-            print(f"\n✅ ¡LISTO! Ahora reinicia el servidor para cargar las nuevas propiedades.")
-        else:
-            print(f"\n❌ No se pudo completar la conversión.")
+        # Reemplazar coma por punto para decimales
+        valor_limpio = valor_limpio.replace(',', '.')
         
-        input("\nPresiona Enter para salir...")
+        try:
+            if '.' in valor_limpio:
+                return float(valor_limpio)
+            else:
+                return int(valor_limpio)
+        except ValueError:
+            return valor  # Devolver original si no se puede convertir
+    
+    return valor
+
+def enriquecer_propiedad(propiedad):
+    """Enriquece la propiedad con datos extraídos y metadatos"""
+    
+    # Extraer de descripción si existe
+    if any(key in propiedad for key in ['descripcion', 'descripción', 'caracteristicas']):
+        descripcion = next((propiedad[key] for key in ['descripcion', 'descripción', 'caracteristicas'] 
+                           if key in propiedad and isinstance(propiedad[key], str)), "")
+        
+        if descripcion:
+            propiedad['caracteristicas_extraidas'] = extraer_caracteristicas_avanzadas(descripcion)
+    
+    # Estandarizar campos clave
+    propiedad = estandarizar_campos_clave(propiedad)
+    
+    # Agregar metadatos
+    propiedad['fecha_procesamiento'] = datetime.now().isoformat()
+    propiedad['id_temporal'] = f"prop_{hash(str(propiedad)) % 10000:04d}"
+    
+    return propiedad
+
+def extraer_caracteristicas_avanzadas(texto):
+    """Extrae características específicas del texto usando expresiones regulares"""
+    if not isinstance(texto, str):
+        return {}
+    
+    texto_lower = texto.lower()
+    caracteristicas = {}
+    
+    # Patrones para extraer información
+    patrones = {
+        'ambientes': r'(\d+)\s*(?:amb|ambiente|ambientes|habitaciones|hab)',
+        'banos': r'(\d+)\s*(?:baño|baños|banio|banios)',
+        'metros_cuadrados': r'(\d+)\s*m²|\s*(\d+)\s*metros?',
+        'antiguedad': r'(\d+)\s*(?:año|años|antigüedad)',
+    }
+    
+    for clave, patron in patrones.items():
+        match = re.search(patron, texto_lower)
+        if match:
+            # Tomar el primer grupo que no sea None
+            valor = next((g for g in match.groups() if g is not None), None)
+            if valor:
+                try:
+                    caracteristicas[clave] = int(valor)
+                except ValueError:
+                    pass
+    
+    # Características booleanas
+    bool_caracteristicas = {
+        'pileta': ['pileta', 'piscina'],
+        'balcon': ['balcón', 'balcon'],
+        'terraza': ['terraza'],
+        'cochera': ['cochera', 'garaje', 'garage'],
+        'jardin': ['jardín', 'jardin'],
+        'amueblado': ['amueblado', 'amueblada'],
+        'aire_acondicionado': ['aire acondicionado', 'aire_acondicionado', 'aa'],
+        'calefaccion': ['calefacción', 'calefaccion'],
+        'seguridad': ['seguridad', 'seguro', 'alarma'],
+        'ascensor': ['ascensor', 'elevador']
+    }
+    
+    for clave, palabras in bool_caracteristicas.items():
+        if any(palabra in texto_lower for palabra in palabras):
+            caracteristicas[clave] = True
+    
+    return caracteristicas
+
+def estandarizar_campos_clave(propiedad):
+    """Estandariza campos clave como operación, tipo, etc."""
+    
+    # Mapeos para estandarización
+    mapeo_operacion = {
+        'alquiler': ['alquiler', 'renta', 'arriendo'],
+        'venta': ['venta', 'vende', 'comprar', 'venta']
+    }
+    
+    mapeo_tipo = {
+        'departamento': ['depto', 'dpto', 'apto', 'apartamento', 'departamento'],
+        'casa': ['casa', 'house', 'vivienda'],
+        'ph': ['ph', 'propiedad horizontal'],
+        'casaquinta': ['casa quinta', 'quinta', 'casaquinta'],
+        'terreno': ['terreno', 'lote', 'parcela']
+    }
+    
+    # Estandarizar operación
+    if 'operacion' in propiedad:
+        propiedad['operacion'] = estandarizar_valor(propiedad['operacion'], mapeo_operacion)
+    
+    # Estandarizar tipo
+    if 'tipo' in propiedad:
+        propiedad['tipo'] = estandarizar_valor(propiedad['tipo'], mapeo_tipo)
+    
+    # Estandarizar ubicación
+    for campo_ubicacion in ['barrio', 'localidad', 'ciudad']:
+        if campo_ubicacion in propiedad and isinstance(propiedad[campo_ubicacion], str):
+            propiedad[campo_ubicacion] = propiedad[campo_ubicacion].title().strip()
+    
+    return propiedad
+
+def estandarizar_valor(valor, mapeo):
+    """Estandariza un valor según un mapeo dado"""
+    if not isinstance(valor, str):
+        return valor
+    
+    valor_lower = valor.lower()
+    
+    for valor_estandar, variantes in mapeo.items():
+        if any(variante in valor_lower for variante in variantes):
+            return valor_estandar
+    
+    return valor
+
+# EJECUCIÓN PRINCIPAL
+if __name__ == "__main__":
+    print("🏠 CONVERSOR EXCEL A JSON - DANTE PROPIEDADES")
+    print("=" * 50)
+    
+    archivo_excel = 'propiedades.xlsx'  # Cambiar por tu archivo
+    
+    try:
+        # Convertir el archivo
+        propiedades = excel_a_json_avanzado(archivo_excel)
+        
+        if propiedades:
+            print(f"\n✅ Conversión exitosa!")
+            print(f"📊 Total de propiedades: {len(propiedades)}")
+            
+            # Mostrar ejemplo
+            if propiedades:
+                print(f"\n📋 Ejemplo de propiedad convertida:")
+                print(json.dumps(propiedades[0], ensure_ascii=False, indent=2))
+        
+    except Exception as e:
+        print(f"❌ Error en la conversión: {e}")

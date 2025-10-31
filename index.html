@@ -536,7 +536,7 @@
             <div class="input-area">
                 <div class="input-row">
                     <input type="text" id="userInput" 
-                           placeholder="Ej: 'Busco departamento con balcón en Palermo...'"
+                           placeholder="Ej: 'Busco departamento con balcón en Almagro...'"
                            autocomplete="off">
                     <button id="sendBtn">Enviar</button>
                 </div>
@@ -914,20 +914,20 @@
                                 console.log('💡 Data recibida:', data);
                                 
                                 // 👇 SOLUCIÓN TEMPORAL - Crear contexto manual si no hay datos
-                                if (data.search_performed && data.results_count > 0) {
-                                    console.log('🛠️ CREANDO CONTEXTO MANUAL');
-                                    const propiedadesManuales = [{
-                                        title: "Departamento en Palermo SoHo",
-                                        price: 280000,
-                                        neighborhood: "Palermo",
-                                        rooms: 2,
-                                        sqm: 68,
-                                        operacion: "alquiler",
-                                        tipo: "departamento",
-                                        description: "Departamento de 2 ambientes en Palermo SoHo"
-                                    }];
-                                    actualizarContexto(propiedadesManuales, filtrosSeleccionados, 'busqueda');
-                                }
+                                // if (data.search_performed && data.results_count > 0) {
+                                 //   console.log('🛠️ CREANDO CONTEXTO MANUAL');
+                                 //   const propiedadesManuales = [{
+                                  //      title: "Departamento en Palermo SoHo",
+                                  //      price: 280000,
+                                  //      neighborhood: "Palermo",
+                                 //       rooms: 2,
+                                  //      sqm: 68,
+                                 //       operacion: "alquiler",
+                                 //      tipo: "departamento",
+                                 //       description: "Departamento de 2 ambientes en Palermo SoHo"
+                                  //  }];
+                                 //   actualizarContexto(propiedadesManuales, filtrosSeleccionados, 'busqueda');
+                                //}
                             }
 
 
