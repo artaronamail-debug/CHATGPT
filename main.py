@@ -1254,6 +1254,7 @@ async def chat(request: ChatRequest):
                 
                 property_details = propiedad_especifica
                 print(f"🏠 Propiedad seleccionada: {property_details.get('title', 'N/A')}")
+              
         
         # PRIORIDAD 2: Si no hay contexto, usar detección por palabras clave MEJORADA
         elif any(keyword in text_lower for keyword in [
@@ -1293,7 +1294,7 @@ async def chat(request: ChatRequest):
                         except ValueError as e:
                             print(f"⚠️ No se pudo convertir el precio detectado: {e}")
                    
-                    # 🔥 CORRECCIÓN: AGREGAR 'elif' AQUÍ
+                    # 🔥 CORRECCIÓN CRÍTICA: AGREGAR 'elif' AQUÍ
                     # 2. Detectar por BARRIO específico
                     elif not propiedad_especifica:
                         barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "almagro", "villa crespo", "san isidro", "vicente lopez"]
@@ -1357,7 +1358,10 @@ async def chat(request: ChatRequest):
                             if row:
                                 property_details = dict(row)
                             conn.close()
-
+        
+        
+        
+        
         # 🔥 COMBINAR FILTROS: frontend + detección automática
         
         # 1. Agregar filtros del frontend si existen
