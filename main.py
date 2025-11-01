@@ -1270,6 +1270,7 @@ async def chat(request: ChatRequest):
                 if propiedades_contexto:
                     # DETECTAR QUÉ PROPIEDAD ESPECÍFICA QUIERE
                     propiedad_especifica = None
+                    import re
                     
                     # 1. Detectar por PRECIO específico
                     import re
