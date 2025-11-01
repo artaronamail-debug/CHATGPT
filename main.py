@@ -830,6 +830,7 @@ def log_conversation(user_text, response_text, channel="web", response_time=0.0,
 
 def detect_filters(text_lower: str) -> Dict[str, Any]:
     """Detecta y extrae filtros del texto del usuario - VERSIÓN MEJORADA Y GENÉRICA"""
+    import re
     filters = {}
     
     # Lista COMPLETA de barrios (expandible)
@@ -1198,24 +1199,30 @@ async def chat(request: ChatRequest):
                 if propiedades_contexto:
                         # DETECTAR QUÉ PROPIEDAD ESPECÍFICA QUIERE
                     propiedad_especifica = None
-
-                    # Detectar por PRECIO específico
+                    
+                    
+                    # 1. Detectar por PRECIO específico
                     import re
                     precio_pattern = r'\$?\s*(\d+[.,]?\d*)[\s,]*(?:mil|mil|k|K)?'
                     match_precio = re.search(precio_pattern, user_text)
+                    print(f"🔍 DEBUG Precio - Match: {match_precio}")  # 🔥 AGREGAR ESTE PRINT
+                    
                     if match_precio:
                         precio_texto = match_precio.group(1).replace('.', '').replace(',', '')
+                        print(f"🔍 DEBUG Precio - Texto: {precio_texto}")  # 🔥 AGREGAR ESTE PRINT
+                        
                         try:
                             precio_buscado = int(precio_texto)
                             print(f"🎯 Precio detectado en consulta: ${precio_buscado}")
                             
                             for prop in propiedades_contexto:
+                                print(f"🔍 DEBUG - Comparando: {prop.get('title')} - ${prop.get('price')}")  # 🔥 AGREGAR ESTE PRINT
                                 if prop.get('price') == precio_buscado:
                                     propiedad_especifica = prop
                                     print(f"🎯 Detectada propiedad por precio: {propiedad_especifica.get('title')} - ${propiedad_especifica.get('price')}")
                                     break
-                        except ValueError:
-                            print("⚠️ No se pudo convertir el precio detectado")
+                        except ValueError as e:
+                            print(f"⚠️ No se pudo convertir el precio detectado: {e}")
 
                     # Detectar por BARRIO específico
                     elif not propiedad_especifica:
