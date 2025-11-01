@@ -829,10 +829,10 @@ def log_conversation(user_text, response_text, channel="web", response_time=0.0,
         print(f"❌ Error en log: {e}")
 
 def detect_filters(text_lower: str) -> Dict[str, Any]:
-    """Detecta y extrae filtros del texto del usuario - VERSIÓN GENERAL MEJORADA"""
+    """Detecta y extrae filtros del texto del usuario - VERSIÓN MEJORADA Y GENÉRICA"""
     filters = {}
     
-    # Lista COMPLETA de barrios (puede expandirse dinámicamente)
+    # Lista COMPLETA de barrios (expandible)
     barrio_keywords = [
         'palermo', 'recoleta', 'belgrano', 'almagro', 'caballito',
         'microcentro', 'balvanera', 'villa crespo', 'san telmo', 'boca',
@@ -866,80 +866,98 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
         'lotes': 'terreno'
     }
     
-    # 🔥 DETECCIÓN MEJORADA DE TIPO (GENERAL)
+    # 🔥 DETECCIÓN MEJORADA DE BARRIO (MÁS FLEXIBLE)
+    barrio_detectado = None
+    
+    # 1. Detectar barrio por palabras clave exactas
+    for barrio in barrio_keywords:
+        if barrio in text_lower:
+            barrio_detectado = barrio
+            print(f"📍 Barrio detectado (keyword): {barrio_detectado}")
+            break
+    
+    # 2. Si no se detectó, buscar con patrones regex (más flexible)
+    if not barrio_detectado:
+        barrio_patterns = [
+            r"en ([a-zA-Záéíóúñ\s]+)",           # "en Palermo", "en Belgrano R"
+            r"barrio ([a-zA-Záéíóúñ\s]+)",       # "barrio Palermo"
+            r"zona ([a-zA-Záéíóúñ\s]+)",         # "zona Recoleta"  
+            r"de ([a-zA-Záéíóúñ\s]+)$",          # "departamento de Palermo"
+            r"el de ([a-zA-Záéíóúñ\s]+)",        # "el de Colegiales"
+            r"la de ([a-zA-Záéíóúñ\s]+)",        # "la de Villa Crespo"
+        ]
+        
+        for pattern in barrio_patterns:
+            match = re.search(pattern, text_lower)
+            if match:
+                potential_barrio = match.group(1).strip().lower()
+                # Verificar que sea un barrio válido y no otra palabra
+                if (potential_barrio in barrio_keywords and 
+                    potential_barrio not in operacion_keywords and
+                    potential_barrio not in tipo_keywords):
+                    barrio_detectado = potential_barrio
+                    print(f"📍 Barrio detectado (regex): {barrio_detectado}")
+                    break
+    
+    if barrio_detectado:
+        filters["neighborhood"] = barrio_detectado
+    
+    # 🔥 DETECCIÓN MEJORADA DE TIPO
     for keyword, tipo in tipo_keywords.items():
         if keyword in text_lower:
             filters["tipo"] = tipo
             print(f"🏠 Tipo detectado: {filters['tipo']}")
             break
     
-    # Detectar barrio por palabras clave exactas (GENERAL)
-    for barrio in barrio_keywords:
-        if barrio in text_lower:
-            filters["neighborhood"] = barrio
-            print(f"📍 Barrio detectado: {filters['neighborhood']}")
-            break
-    
-    # Detectar operación (GENERAL)
+    # 🔥 DETECCIÓN MEJORADA DE OPERACIÓN
     for keyword, operacion in operacion_keywords.items():
         if keyword in text_lower:
             filters["operacion"] = operacion
             print(f"🏢 Operación detectada: {filters['operacion']}")
             break
     
-    # Extraer barrio con patrones regex (GENERAL - para cualquier barrio)
-    if "neighborhood" not in filters:
-        barrio_patterns = [
-            r"en ([a-zA-Záéíóúñ ]+)",
-            r"barrio ([a-zA-Záéíóúñ ]+)",
-            r"zona ([a-zA-Záéíóúñ ]+)",
-            r"de ([a-zA-Záéíóúñ ]+)$"
-        ]
-        
-        for pattern in barrio_patterns:
-            m_barrio = re.search(pattern, text_lower)
-            if m_barrio:
-                potential_neighborhood = m_barrio.group(1).strip().lower()
-                # Verificar que no sea una palabra de operación o tipo
-                if (potential_neighborhood not in operacion_keywords and 
-                    potential_neighborhood not in tipo_keywords and
-                    len(potential_neighborhood) > 2):
-                    filters["neighborhood"] = potential_neighborhood
-                    print(f"📍 Barrio detectado (regex): {filters['neighborhood']}")
-                    break
-    
-    # 🔥 DETECCIÓN MEJORADA DE PRECIOS (GENERAL)
-    price_patterns = [
-        r"hasta \$?\s*([0-9\.]+)",
-        r"máximo \$?\s*([0-9\.]+)", 
-        r"precio.*?\$?\s*([0-9\.]+)",
-        r"menos de \$?\s*([0-9\.]+)",
-        r"\$?\s*([0-9\.]+)\s*pesos"
+    # 🔥 DETECCIÓN GENÉRICA DE PRECIO
+    precio_patterns = [
+        r"hasta \$?\s*([0-9\.]+)",           # "hasta $280000"
+        r"máximo \$?\s*([0-9\.]+)",          # "máximo 280000"
+        r"precio.*?\$?\s*([0-9\.]+)",        # "precio 280000"
+        r"menos de \$?\s*([0-9\.]+)",        # "menos de 280000"
+        r"\$?\s*([0-9\.]+)\s*pesos",         # "280000 pesos"
+        r"de \$?\s*([0-9\.]+)",              # "de $280000"
+        r"valor.*?\$?\s*([0-9\.]+)",         # "valor 280000"
     ]
     
-    for pattern in price_patterns:
-        m_price = re.search(pattern, text_lower)
-        if m_price:
-            filters["max_price"] = int(m_price.group(1).replace('.', ''))
-            print(f"💰 Precio máximo detectado: {filters['max_price']}")
-            break
+    for pattern in precio_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            try:
+                precio = int(match.group(1).replace('.', ''))
+                filters["max_price"] = precio
+                print(f"💰 Precio máximo detectado: ${precio}")
+                break
+            except ValueError:
+                continue
     
-    # Precio mínimo (GENERAL)
-    m_min_price = re.search(r"desde \$?\s*([0-9\.]+)", text_lower)
-    if m_min_price:
-        filters["min_price"] = int(m_min_price.group(1).replace('.', ''))
-        print(f"💰 Precio mínimo detectado: {filters['min_price']}")
+    # Precio mínimo
+    min_price_match = re.search(r"desde \$?\s*([0-9\.]+)", text_lower)
+    if min_price_match:
+        try:
+            min_price = int(min_price_match.group(1).replace('.', ''))
+            filters["min_price"] = min_price
+            print(f"💰 Precio mínimo detectado: ${min_price}")
+        except ValueError:
+            pass
     
-    # Ambientes (GENERAL)
-    m_rooms = re.search(r"(\d+)\s*amb", text_lower)
-    if m_rooms:
-        filters["min_rooms"] = int(m_rooms.group(1))
+    # Ambientes
+    rooms_match = re.search(r"(\d+)\s*amb", text_lower)
+    if rooms_match:
+        filters["min_rooms"] = int(rooms_match.group(1))
         print(f"🚪 Ambientes detectados: {filters['min_rooms']}")
-
-    # Metros cuadrados (GENERAL)
-    m_sqm = re.search(r"(\d+)\s*m2", text_lower) or re.search(r"(\d+)\s*metros", text_lower)
-    if m_sqm:
-        filters["min_sqm"] = int(m_sqm.group(1))
+    
+    # Metros cuadrados
+    sqm_match = re.search(r"(\d+)\s*m2", text_lower) or re.search(r"(\d+)\s*metros", text_lower)
+    if sqm_match:
+        filters["min_sqm"] = int(sqm_match.group(1))
         print(f"📏 Metros cuadrados detectados: {filters['min_sqm']}")
 
     print(f"🎯 Filtros finales detectados: {filters}")
@@ -1174,11 +1192,14 @@ async def chat(request: ChatRequest):
                 propiedades_contexto = contexto_anterior['resultados']
                      
                 
+                
+                
+                
                 if propiedades_contexto:
-                    # DETECTAR QUÉ PROPIEDAD ESPECÍFICA QUIERE
+                        # DETECTAR QUÉ PROPIEDAD ESPECÍFICA QUIERE
                     propiedad_especifica = None
 
-                    # 🔥 DETECCIÓN GENÉRICA POR PRECIO (CUALQUIER MONTO)
+                    # Detectar por PRECIO específico
                     import re
                     precio_pattern = r'\$?\s*(\d+[.,]?\d*)[\s,]*(?:mil|mil|k|K)?'
                     match_precio = re.search(precio_pattern, user_text)
@@ -1196,23 +1217,28 @@ async def chat(request: ChatRequest):
                         except ValueError:
                             print("⚠️ No se pudo convertir el precio detectado")
 
-                    # Detectar por TIPO específico
-                    elif "departamento" in user_text.lower() and not propiedad_especifica:
-                        for prop in propiedades_contexto:
-                            if prop.get('tipo') == 'departamento' and "estudio" not in prop.get('title', '').lower():
-                                propiedad_especifica = prop
-                                print(f"🎯 Detectada propiedad por tipo: {propiedad_especifica.get('title')}")
-                                break
-
-                    # Detectar por PALABRAS CLAVE en el título
+                    # Detectar por BARRIO específico
                     elif not propiedad_especifica:
-                        keywords = ["soho", "palermo soho", "departamento en palermo", "belgrano", "recoleta", "almagro"]
-                        for keyword in keywords:
-                            if keyword in user_text.lower():
+                        barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "almagro", "villa crespo", "san isidro", "vicente lopez"]
+                        for barrio in barrios:
+                            if barrio in user_text.lower():
                                 for prop in propiedades_contexto:
-                                    if keyword in prop.get('title', '').lower() or keyword in prop.get('neighborhood', '').lower():
+                                    if barrio in prop.get('neighborhood', '').lower():
                                         propiedad_especifica = prop
-                                        print(f"🎯 Detectada propiedad por keyword: {propiedad_especifica.get('title')}")
+                                        print(f"🎯 Detectada propiedad por barrio: {propiedad_especifica.get('title')} - {propiedad_especifica.get('neighborhood')}")
+                                        break
+                                if propiedad_especifica:
+                                    break
+
+                    # Detectar por TIPO específico
+                    elif not propiedad_especifica:
+                        tipos = ["departamento", "casa", "ph", "terreno"]
+                        for tipo in tipos:
+                            if tipo in user_text.lower():
+                                for prop in propiedades_contexto:
+                                    if tipo in prop.get('tipo', '').lower():
+                                        propiedad_especifica = prop
+                                        print(f"🎯 Detectada propiedad por tipo: {propiedad_especifica.get('title')} - {propiedad_especifica.get('tipo')}")
                                         break
                                 if propiedad_especifica:
                                     break
@@ -1233,8 +1259,7 @@ async def chat(request: ChatRequest):
                     if not propiedad_especifica and propiedades_contexto:
                         propiedad_especifica = propiedades_contexto[0]
                         print(f"🎯 Usando primera propiedad por defecto: {propiedad_especifica.get('title')}")
-                    
-                    
+                               
                     property_details = propiedad_especifica
             else:
                 # Try to find the property from the conversation history
