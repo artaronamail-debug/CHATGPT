@@ -1177,8 +1177,83 @@ async def chat(request: ChatRequest):
             print("🎯 Usando contexto del frontend para seguimiento")
             propiedades_contexto = contexto_anterior['resultados']
             if propiedades_contexto:
-                property_details = propiedades_contexto[0]  # Tomar la primera propiedad
-                print(f"🏠 Propiedad desde contexto: {property_details.get('title', 'N/A')}")
+                # 🔥 REEMPLAZAR CON LÓGICA DE DETECCIÓN INTELIGENTE:
+                propiedad_especifica = None
+                
+                # 1. Detectar por PRECIO específico
+                import re
+                precio_pattern = r'(?:\$?\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(?:mil|mil|k|K)?'
+                match_precio = re.search(precio_pattern, user_text)
+                print(f"🔍 DEBUG Precio - Match: {match_precio}")
+                print(f"🔍 DEBUG Precio - Texto original: '{user_text}'")
+                
+                if match_precio:
+                    precio_texto = match_precio.group(1)
+                    print(f"🔍 DEBUG Precio - Texto capturado: '{precio_texto}'")
+                    
+                    precio_limpio = precio_texto.replace('.', '').replace(',', '')
+                    print(f"🔍 DEBUG Precio - Texto limpio: '{precio_limpio}'")
+                    
+                    try:
+                        precio_buscado = int(precio_limpio)
+                        print(f"🎯 Precio detectado en consulta: ${precio_buscado}")
+                        
+                        for prop in propiedades_contexto:
+                            print(f"🔍 DEBUG - Comparando: {prop.get('title')} - ${prop.get('price')}")
+                            if prop.get('price') == precio_buscado:
+                                propiedad_especifica = prop
+                                print(f"🎯 Detectada propiedad por precio: {propiedad_especifica.get('title')} - ${propiedad_especifica.get('price')}")
+                                break
+                        if not propiedad_especifica:
+                            print(f"⚠️ No se encontró propiedad con precio ${precio_buscado}")
+                    except ValueError as e:
+                        print(f"⚠️ No se pudo convertir el precio detectado: {e}")
+                
+                # 2. Detectar por BARRIO específico
+                elif not propiedad_especifica:
+                    barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "almagro", "villa crespo", "san isidro", "vicente lopez"]
+                    for barrio in barrios:
+                        if barrio in user_text.lower():
+                            for prop in propiedades_contexto:
+                                if barrio in prop.get('neighborhood', '').lower():
+                                    propiedad_especifica = prop
+                                    print(f"🎯 Detectada propiedad por barrio: {propiedad_especifica.get('title')} - {propiedad_especifica.get('neighborhood')}")
+                                    break
+                            if propiedad_especifica:
+                                break
+
+                # 3. Detectar por TIPO específico
+                elif not propiedad_especifica:
+                    tipos = ["departamento", "casa", "ph", "terreno"]
+                    for tipo in tipos:
+                        if tipo in user_text.lower():
+                            for prop in propiedades_contexto:
+                                if tipo in prop.get('tipo', '').lower():
+                                    propiedad_especifica = prop
+                                    print(f"🎯 Detectada propiedad por tipo: {propiedad_especifica.get('title')} - {propiedad_especifica.get('tipo')}")
+                                    break
+                            if propiedad_especifica:
+                                break
+
+                # 4. Detectar por NÚMERO (primero, segundo, etc.)
+                if not propiedad_especifica:
+                    if any(word in user_text.lower() for word in ['primero', 'primera', '1']):
+                        propiedad_especifica = propiedades_contexto[0]
+                        print(f"🎯 Detectada primera propiedad: {propiedad_especifica.get('title')}")
+                    elif any(word in user_text.lower() for word in ['segundo', 'segunda', '2']) and len(propiedades_contexto) > 1:
+                        propiedad_especifica = propiedades_contexto[1]
+                        print(f"🎯 Detectada segunda propiedad: {propiedad_especifica.get('title')}")
+                    elif any(word in user_text.lower() for word in ['tercero', 'tercera', '3']) and len(propiedades_contexto) > 2:
+                        propiedad_especifica = propiedades_contexto[2]
+                        print(f"🎯 Detectada tercera propiedad: {propiedad_especifica.get('title')}")
+
+                # 5. Si no se detecta específicamente, usar la primera del contexto
+                if not propiedad_especifica and propiedades_contexto:
+                    propiedad_especifica = propiedades_contexto[0]
+                    print(f"🎯 Usando primera propiedad por defecto: {propiedad_especifica.get('title')}")
+                
+                property_details = propiedad_especifica
+                print(f"🏠 Propiedad seleccionada: {property_details.get('title', 'N/A')}")
         
         # PRIORIDAD 2: Si no hay contexto, usar detección por palabras clave MEJORADA
         elif any(keyword in text_lower for keyword in [
@@ -1197,7 +1272,7 @@ async def chat(request: ChatRequest):
                     
                     # 1. Detectar por PRECIO específico
                     import re
-                    precio_pattern = r'\$?\s*(\d+[.,]?\d*)[\s,]*(?:mil|mil|k|K)?'
+                    precio_pattern = r'(?:\$?\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(?:mil|mil|k|K)?'
                     match_precio = re.search(precio_pattern, user_text)
                     print(f"🔍 DEBUG Precio - Match: {match_precio}")
                     
@@ -1217,7 +1292,8 @@ async def chat(request: ChatRequest):
                                     break
                         except ValueError as e:
                             print(f"⚠️ No se pudo convertir el precio detectado: {e}")
-
+                   
+                    # 🔥 CORRECCIÓN: AGREGAR 'elif' AQUÍ
                     # 2. Detectar por BARRIO específico
                     elif not propiedad_especifica:
                         barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "almagro", "villa crespo", "san isidro", "vicente lopez"]
