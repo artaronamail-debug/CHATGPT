@@ -1174,22 +1174,47 @@ async def chat(request: ChatRequest):
                 propiedades_contexto = contexto_anterior['resultados']
                 if propiedades_contexto:
                     # DETECTAR QUÉ PROPIEDAD ESPECÍFICA QUIERE
-                    propiedad_especifica = None
                     
-                    # Si dice "primero", "primera", etc.
-                    if any(word in text_lower for word in ['primero', 'primera', '1']):
-                        propiedad_especifica = propiedades_contexto[0]
-                        print(f"🎯 Usando primera propiedad del contexto: {propiedad_especifica.get('title')}")
                     
-                    # Si dice "segundo", "segunda", etc.
-                    elif any(word in text_lower for word in ['segundo', 'segunda', '2']) and len(propiedades_contexto) > 1:
-                        propiedad_especifica = propiedades_contexto[1]
-                        print(f"🎯 Usando segunda propiedad del contexto: {propiedad_especifica.get('title')}")
+                # 👇 FILTRAR: Si el usuario menciona una propiedad específica, usar SOLO esa
+                propiedad_especifica = None
+
+                # Detectar por PRECIO específico
+                if "280.000" in user_text.lower() or "280,000" in user_text.lower() or "280000" in user_text.lower():
+                    for prop in propiedades_contexto:
+                        if prop.get('price') == 280000:
+                            propiedad_especifica = prop
+                            print(f"🎯 Detectada propiedad por precio: {propiedad_especifica.get('title')}")
+                            break
+
+                # Detectar por TIPO específico
+                elif "departamento" in user_text.lower() and not propiedad_especifica:
+                    for prop in propiedades_contexto:
+                        if prop.get('tipo') == 'departamento' and "estudio" not in prop.get('title', '').lower():
+                            propiedad_especifica = prop
+                            print(f"🎯 Detectada propiedad por tipo: {propiedad_especifica.get('title')}")
+                            break
+
+                # Detectar por PALABRAS CLAVE en el título
+                elif not propiedad_especifica:
+                    keywords = ["soho", "palermo soho", "departamento en palermo"]
+                    for keyword in keywords:
+                        if keyword in user_text.lower():
+                            for prop in propiedades_contexto:
+                                if keyword in prop.get('title', '').lower():
+                                    propiedad_especifica = prop
+                                    print(f"🎯 Detectada propiedad por keyword: {propiedad_especifica.get('title')}")
+                                    break
+                            if propiedad_especifica:
+                                break
+
+                # Si no se detecta específicamente, usar la primera del contexto
+                if not propiedad_especifica and propiedades_contexto:
+                    propiedad_especifica = propiedades_contexto[0]
+                    print(f"🎯 Usando primera propiedad por defecto: {propiedad_especifica.get('title')}")
                     
-                    # Por defecto, usar la primera
-                    else:
-                        propiedad_especifica = propiedades_contexto[0]
-                        print(f"🎯 Usando primera propiedad por defecto: {propiedad_especifica.get('title')}")
+                    
+                    
                     
                     property_details = propiedad_especifica
             else:
