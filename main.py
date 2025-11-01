@@ -842,7 +842,7 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
         'villa ramos mejía', 'liniers', 'mataderos', 'velez sarsfield', 'versalles',
         'paternal', 'chacarita', 'agronomia', 'villa pueyrredón', 'saavedra',
         'coghlan', 'belgrano r', 'belgrano c', 'nuñez', 'olivos', 'san isidro',
-        'vicente lopez', 'puerto madero', 'colegiales', 'barrio norte'
+        'vicente lopez', 'puerto madero', 'colegiales', 'soho', 'barrio norte'
     ]
     
     operacion_keywords = {
@@ -1210,12 +1210,13 @@ async def chat(request: ChatRequest):
                         print(f"⚠️ No se pudo convertir el precio detectado: {e}")
                 
                 # 2. Detectar por BARRIO específico
-                elif not propiedad_especifica:
-                    barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "almagro", "villa crespo", "san isidro", "vicente lopez"]
+                if not propiedad_especifica:
+                    barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "soho","almagro", "villa crespo", "san isidro", "vicente lopez"]
                     for barrio in barrios:
                         if barrio in user_text.lower():
                             for prop in propiedades_contexto:
-                                if barrio in prop.get('neighborhood', '').lower():
+                               if (barrio in prop.get('neighborhood', '').lower() or 
+                                    barrio in prop.get('title', '').lower()):
                                     propiedad_especifica = prop
                                     print(f"🎯 Detectada propiedad por barrio: {propiedad_especifica.get('title')} - {propiedad_especifica.get('neighborhood')}")
                                     break
@@ -1223,7 +1224,7 @@ async def chat(request: ChatRequest):
                                 break
 
                 # 3. Detectar por TIPO específico
-                elif not propiedad_especifica:
+                if not propiedad_especifica:
                     tipos = ["departamento", "casa", "ph", "terreno"]
                     for tipo in tipos:
                         if tipo in user_text.lower():
@@ -1297,12 +1298,13 @@ async def chat(request: ChatRequest):
                    
                     # 🔥 CORRECCIÓN CRÍTICA: AGREGAR 'elif' AQUÍ
                     # 2. Detectar por BARRIO específico
-                    elif not propiedad_especifica:
-                        barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "almagro", "villa crespo", "san isidro", "vicente lopez"]
+                    if not propiedad_especifica:
+                        barrios = ["colegiales", "palermo", "soho","boedo", "belgrano", "recoleta", "almagro", "villa crespo", "san isidro", "vicente lopez"]
                         for barrio in barrios:
                             if barrio in user_text.lower():
                                 for prop in propiedades_contexto:
-                                    if barrio in prop.get('neighborhood', '').lower():
+                                    if (barrio in prop.get('neighborhood', '').lower() or 
+                                        barrio in prop.get('title', '').lower()):
                                         propiedad_especifica = prop
                                         print(f"🎯 Detectada propiedad por barrio: {propiedad_especifica.get('title')} - {propiedad_especifica.get('neighborhood')}")
                                         break
