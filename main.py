@@ -43,8 +43,8 @@ print(f"   GEMINI_KEYS: {os.getenv('GEMINI_KEYS', 'NO DEFINIDA')}")
 
 
 
-def call_gemini_with_rotation (prompt: str) -> str:
-    import google.generativeai as genai  # 🔥 AGREGAR ESTA IMPORTACIÓN
+def call_gemini_with_rotation(prompt: str) -> str:
+    import google.generativeai as genai
     
     print(f"🎯 INICIANDO ROTACIÓN DE CLAVES")
     print(f"🔧 Modelo configurado: {MODEL}")
@@ -74,22 +74,31 @@ def call_gemini_with_rotation (prompt: str) -> str:
                 raise Exception("Respuesta vacía de Gemini")
             
             answer = response.text.strip()
-            print(f"✅ Respuesta exitosa")
-            print(f"💬 Respuesta: {answer}")
+            print(f"✅ Respuesta exitosa con clave {i+1}")
             
             return answer
 
         except Exception as e:
-            print(f"❌ ERROR DETALLADO con clave {i+1}:")
-            print(f"❌ Tipo: {type(e).__name__}")
-            print(f"❌ Mensaje: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            # 🔥 SUPRIMIR TRACEBACK COMPLETO PARA ERRORES ESPERADOS
+            error_type = type(e).__name__
+            
+            if "ResourceExhausted" in error_type or "429" in str(e):
+                print(f"❌ Clave {i+1} agotada (límite de uso)")
+            elif "PermissionDenied" in error_type or "401" in str(e):
+                print(f"❌ Clave {i+1} no autorizada")
+            elif "QuotaExceeded" in error_type:
+                print(f"❌ Clave {i+1} sin quota disponible")
+            else:
+                # Solo mostrar traceback completo para errores inesperados
+                print(f"❌ ERROR INESPERADO con clave {i+1}:")
+                print(f"❌ Tipo: {error_type}")
+                print(f"❌ Mensaje: {str(e)}")
+                import traceback
+                traceback.print_exc()
+            
             continue
     
     return "❌ Todas las claves están agotadas o no autorizadas. Verificá la configuración."
-
-
 
 
 def diagnosticar_problemas():
@@ -1144,11 +1153,6 @@ async def chat(request: ChatRequest):
             if contexto_anterior.get('resultados'):
                 primera_propiedad = contexto_anterior['resultados'][0]
                 print(f"🏠 Propiedad en contexto: {primera_propiedad.get('title', 'N/A')} - ${primera_propiedad.get('price', 'N/A')}")
-                
-                
-        
-        
-        
         
         # 👇 DETECCIÓN MEJORADA DE SEGUIMIENTO (usa contexto o historial)
         
@@ -1196,7 +1200,7 @@ async def chat(request: ChatRequest):
 
         # Si hay filtros, realizar búsqueda
         
-# 👇 EVITAR BÚSQUEDA SI HAY CONTEXTO DE SEGUIMIENTO
+        # 👇 EVITAR BÚSQUEDA SI HAY CONTEXTO DE SEGUIMIENTO
         if filters and not property_details and not (es_seguimiento_final and contexto_anterior):
             print("🎯 Activando búsqueda con filtros combinados...")
             search_performed = True
@@ -1212,8 +1216,6 @@ async def chat(request: ChatRequest):
                 print(f"📋 Usando {len(results)} propiedades del contexto anterior")
                 search_performed = True
         
-        
-        
         # Tono según canal
         if channel == "whatsapp":
             style_hint = "Respondé de forma breve, directa y cálida como si fuera un mensaje de WhatsApp."
@@ -1221,13 +1223,6 @@ async def chat(request: ChatRequest):
             style_hint = "Respondé de forma explicativa, profesional y cálida como si fuera una consulta web."
 
         # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
- 
- 
- 
-# 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
-        
-        
- # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
         if es_seguimiento_final and contexto_anterior and contexto_anterior.get('resultados'):
             # 👇 AGREGAR VERIFICACIÓN DE SEGURIDAD
             propiedades_contexto = contexto_anterior.get('resultados', [])
@@ -1304,7 +1299,6 @@ async def chat(request: ChatRequest):
             prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
             print("🧠 Prompt normal enviado a Gemini (no es seguimiento)")
             
-                        
         metrics.increment_gemini_calls()
         answer = call_gemini_with_rotation(prompt)
         
@@ -1325,16 +1319,12 @@ async def chat(request: ChatRequest):
         raise
     except Exception as e:
         metrics.increment_failures()
-        # ✅ MOSTRAR EL ERROR REAL EN CONSOLA
-        import traceback
-        print(f"❌ ERROR DETALLADO en endpoint /chat:")
-        print(f"❌ Tipo: {type(e).__name__}")
-        print(f"❌ Mensaje: {str(e)}")
-        print(f"❌ Traceback completo:")
-        traceback.print_exc()
+        # 🔥 MANEJO DE ERRORES MÁS LIMPIO
+        error_type = type(e).__name__
+        print(f"❌ ERROR en endpoint /chat: {error_type}: {str(e)}")
         
-        # Respuesta temporal para debugging
-        error_message = f"🔧 ERROR ESPECÍFICO: {type(e).__name__}: {str(e)}"
+        # Respuesta amigable al usuario
+        error_message = "⚠️ Ocurrió un error procesando tu consulta. Por favor, intentá nuevamente en unos momentos."
         
         return ChatResponse(
             response=error_message,
