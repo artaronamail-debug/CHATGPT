@@ -241,72 +241,6 @@ def get_cached_results(filters: Dict[str, Any]) -> Optional[List[Dict]]:
 
 # ✅ FUNCIONES MEJORADAS
 def cargar_propiedades_a_db():
-    """Carga las propiedades del JSON a la base de datos SQLite con mapeo correcto de campos"""
-    try:
-        propiedades = cargar_propiedades_json("properties.json")
-        if not propiedades:
-            print("❌ No hay propiedades para cargar")
-            return
-        
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-        
-        # Limpiar tabla existente
-        cur.execute("DELETE FROM properties")
-        
-        # Insertar nuevas propiedades con MAPEO CORRECTO
-        propiedades_cargadas = 0
-        for prop in propiedades:
-            try:
-                cur.execute('''
-                    INSERT INTO properties (
-                        id, title, neighborhood, price, rooms, sqm, description, 
-                        operacion, tipo, direccion, antiguedad, estado, orientacion, 
-                        piso, expensas, amenities, cochera, balcon, pileta, 
-                        acepta_mascotas, aire_acondicionado, info_multimedia
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    prop.get('id_temporal'),
-                    prop.get('titulo'),
-                    prop.get('barrio'), 
-                    prop.get('precio'),
-                    prop.get('ambientes'),
-                    prop.get('metros'),
-                    prop.get('descripcion'),
-                    prop.get('operacion'),
-                    prop.get('tipo'),
-                    prop.get('direccion'),
-                    prop.get('antiguedad'),
-                    prop.get('estado'),
-                    prop.get('orientacion'),
-                    prop.get('piso'),
-                    prop.get('expensas'),
-                    prop.get('amenities'),
-                    prop.get('cochera'),
-                    prop.get('balcon'),
-                    prop.get('pileta'),
-                    prop.get('acepta_mascotas'),
-                    prop.get('aire_acondicionado'),
-                    prop.get('info_multimedia')
-                ))
-                propiedades_cargadas += 1
-            except Exception as e:
-                print(f"⚠️ Error cargando propiedad {prop.get('titulo')}: {e}")
-                continue
-        
-        conn.commit()
-        conn.close()
-        print(f"✅ {propiedades_cargadas}/{len(propiedades)} propiedades cargadas en la base de datos")
-        
-        # 🔥 EJECUTAR VERIFICACIÓN GENERAL
-        verificar_carga_propiedades()
-        
-    except Exception as e:
-        print(f"❌ Error cargando propiedades a DB: {e}")
-        import traceback
-        traceback.print_exc()
-
-def cargar_propiedades_a_db():
     """Carga las propiedades del JSON a la base de datos SQLite con mapeo correcto de campos y tipos"""
     try:
         propiedades = cargar_propiedades_json("properties.json")
@@ -365,6 +299,23 @@ def cargar_propiedades_a_db():
                 aire_acondicionado = str(prop.get('aire_acondicionado', ''))
                 info_multimedia = str(prop.get('info_multimedia', ''))
                 
+                # 🔥 DEBUG DETALLADO - Mostrar tipos reales
+                print(f"🔍 DEBUG - Tipos de datos para '{titulo}':")
+                print(f"   id: {type(id_prop).__name__} = {id_prop}")
+                print(f"   precio: {type(precio).__name__} = {precio}")
+                print(f"   ambientes: {type(ambientes).__name__} = {ambientes}")
+                print(f"   metros: {type(metros).__name__} = {metros}")
+                print(f"   antiguedad: {type(antiguedad).__name__} = {antiguedad}")
+                print(f"   expensas: {type(expensas).__name__} = {expensas}")
+                
+                # 🔥 VERIFICAR ESQUEMA DE LA TABLA
+                if propiedades_cargadas == 0:  # Solo una vez
+                    print("🔍 Verificando esquema de la tabla...")
+                    cur.execute("PRAGMA table_info(properties)")
+                    schema = cur.fetchall()
+                    for col in schema:
+                        print(f"   Columna: {col[1]}, Tipo: {col[2]}")
+                
                 cur.execute('''
                     INSERT INTO properties (
                         id, title, neighborhood, price, rooms, sqm, description, 
@@ -397,6 +348,115 @@ def cargar_propiedades_a_db():
         traceback.print_exc()
 
 
+def reparar_esquema_base_datos():
+    """Repara el esquema de la base de datos para que coincida con los tipos de datos"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        # 1. Backup de datos existentes (si los hay)
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='properties'")
+        tabla_existe = cur.fetchone()
+        
+        if tabla_existe:
+            print("🔄 Reparando esquema existente...")
+            # Crear tabla temporal con estructura correcta
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS properties_new (
+                    id TEXT PRIMARY KEY,
+                    title TEXT,
+                    neighborhood TEXT,
+                    price REAL,
+                    rooms INTEGER,
+                    sqm REAL,
+                    description TEXT,
+                    operacion TEXT,
+                    tipo TEXT,
+                    direccion TEXT,
+                    antiguedad INTEGER,
+                    estado TEXT,
+                    orientacion TEXT,
+                    piso TEXT,
+                    expensas REAL,
+                    amenities TEXT,
+                    cochera TEXT,
+                    balcon TEXT,
+                    pileta TEXT,
+                    acepta_mascotas TEXT,
+                    aire_acondicionado TEXT,
+                    info_multimedia TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Intentar migrar datos si es posible
+            try:
+                cur.execute('''
+                    INSERT INTO properties_new (
+                        id, title, neighborhood, price, rooms, sqm, description,
+                        operacion, tipo, direccion, antiguedad, estado, orientacion,
+                        piso, expensas, amenities, cochera, balcon, pileta,
+                        acepta_mascotas, aire_acondicionado, info_multimedia
+                    )
+                    SELECT 
+                        id, title, neighborhood, 
+                        CAST(price AS REAL), CAST(rooms AS INTEGER), CAST(sqm AS REAL),
+                        description, operacion, tipo, direccion, 
+                        CAST(antiguedad AS INTEGER), estado, orientacion,
+                        piso, CAST(expensas AS REAL), amenities, cochera, balcon, pileta,
+                        acepta_mascotas, aire_acondicionado, info_multimedia
+                    FROM properties
+                ''')
+                print("✅ Datos migrados al nuevo esquema")
+            except Exception as mig_error:
+                print(f"ℹ️ No se pudieron migrar datos: {mig_error}")
+            
+            # Reemplazar tabla vieja
+            cur.execute("DROP TABLE properties")
+            cur.execute("ALTER TABLE properties_new RENAME TO properties")
+            
+        else:
+            # Crear tabla nueva si no existe
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS properties (
+                    id TEXT PRIMARY KEY,
+                    title TEXT,
+                    neighborhood TEXT,
+                    price REAL,
+                    rooms INTEGER,
+                    sqm REAL,
+                    description TEXT,
+                    operacion TEXT,
+                    tipo TEXT,
+                    direccion TEXT,
+                    antiguedad INTEGER,
+                    estado TEXT,
+                    orientacion TEXT,
+                    piso TEXT,
+                    expensas REAL,
+                    amenities TEXT,
+                    cochera TEXT,
+                    balcon TEXT,
+                    pileta TEXT,
+                    acepta_mascotas TEXT,
+                    aire_acondicionado TEXT,
+                    info_multimedia TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            print("✅ Tabla creada con esquema correcto")
+        
+        conn.commit()
+        conn.close()
+        print("✅ Esquema de base de datos reparado/creado correctamente")
+        
+    except Exception as e:
+        print(f"❌ Error reparando esquema: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+
 def initialize_databases():
     """Inicializa las bases de datos si no existen"""
     try:
@@ -408,7 +468,7 @@ def initialize_databases():
             os.remove(LOG_PATH)
             print("🗑️ Base de datos logs eliminada forzadamente")
         
-        # Base de datos de logs (NUEVO ESQUEMA)
+        # Base de datos de logs
         conn = sqlite3.connect(LOG_PATH)
         cur = conn.cursor()
         cur.execute('''
@@ -425,13 +485,21 @@ def initialize_databases():
         ''')
         conn.commit()
         conn.close()
+        print("✅ Tabla 'logs' creada/verificada")
         
-        # Base de datos de propiedades (NUEVO ESQUEMA COMPLETO)
+        # Base de datos de propiedades - CON MÁS LOGGING
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
+        
+        # 🔥 VERIFICAR SI LA TABLA EXISTE ANTES
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='properties'")
+        tabla_existe = cur.fetchone()
+        print(f"🔍 Tabla 'properties' existe antes de crear: {tabla_existe is not None}")
+        
+        # Crear tabla
         cur.execute('''
             CREATE TABLE IF NOT EXISTS properties (
-                id INTEGER PRIMARY KEY,
+                id TEXT PRIMARY KEY,
                 title TEXT,
                 neighborhood TEXT,
                 price REAL,
@@ -441,11 +509,11 @@ def initialize_databases():
                 operacion TEXT,
                 tipo TEXT,
                 direccion TEXT,
-                antiguedad TEXT,
+                antiguedad INTEGER,
                 estado TEXT,
                 orientacion TEXT,
                 piso TEXT,
-                expensas TEXT,
+                expensas REAL,
                 amenities TEXT,
                 cochera TEXT,
                 balcon TEXT,
@@ -456,19 +524,92 @@ def initialize_databases():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        
+        # 🔥 VERIFICAR ESQUEMA DESPUÉS DE CREAR
+        cur.execute("PRAGMA table_info(properties)")
+        schema = cur.fetchall()
+        print("🔍 Esquema de la tabla 'properties':")
+        for col in schema:
+            print(f"   {col[1]} : {col[2]}")
+        
         conn.commit()
         conn.close()
+        print("✅ Tabla 'properties' creada/verificada")
 
         # ✅ CARGAR PROPIEDADES DESDE JSON
         cargar_propiedades_a_db()
-        # 🔥 VERIFICACIÓN COMPLETA (AGREGAR ESTA LÍNEA)
         
         print("✅ Bases de datos inicializadas correctamente con nuevo esquema")
-         #verificar_carga_propiedades()
+        
     except Exception as e:
         print(f"❌ Error inicializando bases de datos: {e}")
-
-
+        import traceback
+        traceback.print_exc()
+        
+        
+def reparar_esquema_base_datos():
+    """Repara el esquema de la base de datos para que coincida con los tipos de datos"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        # 1. Crear tabla temporal con datos existentes
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS properties_temp AS 
+            SELECT * FROM properties LIMIT 0
+        ''')
+        
+        # 2. Eliminar tabla original
+        cur.execute("DROP TABLE IF EXISTS properties")
+        
+        # 3. Crear tabla con esquema CORRECTO
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS properties (
+                id TEXT PRIMARY KEY,
+                title TEXT,
+                neighborhood TEXT,
+                price REAL,
+                rooms INTEGER,
+                sqm REAL,
+                description TEXT,
+                operacion TEXT,
+                tipo TEXT,
+                direccion TEXT,
+                antiguedad INTEGER,
+                estado TEXT,
+                orientacion TEXT,
+                piso TEXT,
+                expensas REAL,
+                amenities TEXT,
+                cochera TEXT,
+                balcon TEXT,
+                pileta TEXT,
+                acepta_mascotas TEXT,
+                aire_acondicionado TEXT,
+                info_multimedia TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # 4. Copiar datos de temporal a nueva tabla (si existen)
+        try:
+            cur.execute('''
+                INSERT INTO properties 
+                SELECT * FROM properties_temp
+            ''')
+        except:
+            print("ℹ️ No hay datos para migrar")
+        
+        # 5. Eliminar tabla temporal
+        cur.execute("DROP TABLE IF EXISTS properties_temp")
+        
+        conn.commit()
+        conn.close()
+        print("✅ Esquema de base de datos reparado")
+        
+    except Exception as e:
+        print(f"❌ Error reparando esquema: {e}")
+        
 
 
 def cargar_propiedades_json(filename):
