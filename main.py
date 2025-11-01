@@ -137,6 +137,9 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=1000, description="Mensaje del usuario")
     channel: str = Field(default="web", description="Canal de comunicación (web, whatsapp, etc.)")
     filters: Optional[Dict[str, Any]] = Field(default=None, description="Filtros aplicados desde el frontend")
+    # 👇 AGREGAR ESTOS CAMPOS NUEVOS
+    contexto_anterior: Optional[Dict[str, Any]] = Field(default=None, description="Contexto de la conversación anterior")
+    es_seguimiento: Optional[bool] = Field(default=False, description="Indica si es un mensaje de seguimiento")
 
 class ChatResponse(BaseModel):
     response: str
