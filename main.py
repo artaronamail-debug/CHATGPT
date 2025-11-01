@@ -47,15 +47,14 @@ def call_gemini_with_rotation(prompt: str) -> str:
     import google.generativeai as genai
     
     print(f"🎯 INICIANDO ROTACIÓN DE CLAVES")
-    print(f"🔧 Modelo configurado: {MODEL}")
+    print(f"🔧 Modelo: {MODEL}")
     print(f"🔑 Claves disponibles: {len(API_KEYS)}")
     
     for i, key in enumerate(API_KEYS):
         if not key.strip():
             continue
             
-        print(f"============================================================")
-        print(f"Probando clave: {key[:10]}...")
+        print(f"🔄 Probando clave {i+1}/{len(API_KEYS)}...")
         
         try:
             genai.configure(api_key=key.strip())
@@ -74,32 +73,24 @@ def call_gemini_with_rotation(prompt: str) -> str:
                 raise Exception("Respuesta vacía de Gemini")
             
             answer = response.text.strip()
-            print(f"✅ Respuesta exitosa con clave {i+1}")
+            print(f"✅ Éxito con clave {i+1}")
             
             return answer
 
         except Exception as e:
-            # 🔥 SUPRIMIR TRACEBACK COMPLETO PARA ERRORES ESPERADOS
             error_type = type(e).__name__
             
+            # 🔥 MENSAJES MÁS LIMPIOS
             if "ResourceExhausted" in error_type or "429" in str(e):
-                print(f"❌ Clave {i+1} agotada (límite de uso)")
+                print(f"❌ Clave {i+1} agotada")
             elif "PermissionDenied" in error_type or "401" in str(e):
-                print(f"❌ Clave {i+1} no autorizada")
-            elif "QuotaExceeded" in error_type:
-                print(f"❌ Clave {i+1} sin quota disponible")
+                print(f"❌ Clave {i+1} no autorizada") 
             else:
-                # Solo mostrar traceback completo para errores inesperados
-                print(f"❌ ERROR INESPERADO con clave {i+1}:")
-                print(f"❌ Tipo: {error_type}")
-                print(f"❌ Mensaje: {str(e)}")
-                import traceback
-                traceback.print_exc()
+                print(f"❌ Clave {i+1} error: {error_type}")
             
             continue
     
-    return "❌ Todas las claves están agotadas o no autorizadas. Verificá la configuración."
-
+    return "❌ Todas las claves agotadas. Intente más tarde."
 
 def diagnosticar_problemas():
     """Función de diagnóstico"""
