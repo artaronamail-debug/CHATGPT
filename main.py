@@ -1148,6 +1148,9 @@ async def chat(request: ChatRequest):
         # 👇 DETECCIÓN MEJORADA DE SEGUIMIENTO (usa contexto o historial)
         
         # PRIORIDAD 1: Usar contexto del frontend si está disponible
+
+
+
         if es_seguimiento and contexto_anterior and contexto_anterior.get('resultados'):
             print("🎯 Usando contexto del frontend para seguimiento")
             propiedades_contexto = contexto_anterior['resultados']
@@ -1155,26 +1158,55 @@ async def chat(request: ChatRequest):
                 property_details = propiedades_contexto[0]  # Tomar la primera propiedad
                 print(f"🏠 Propiedad desde contexto: {property_details.get('title', 'N/A')}")
         
-        # PRIORIDAD 2: Si no hay contexto, usar detección por palabras clave
-        elif any(keyword in text_lower for keyword in ["caracteristicas", "detalles", "mas informacion", "más información", "más detalles", "mas detalles", "brindar", "dime más", "cuéntame más"]):
+        # PRIORIDAD 2: Si no hay contexto, usar detección por palabras clave MEJORADA
+        elif any(keyword in text_lower for keyword in [
+            "más información", "mas informacion", "más detalles", "mas detalles", 
+            "brindar", "dime más", "cuéntame más", "información del", "detalles del",
+            "primero", "primera", "este", "esta", "ese", "esa", "el de", "la de"
+        ]):
             print("🔍 Detectado seguimiento por palabras clave")
-            # Try to find the property from the conversation history
-            if historial:
-                last_bot_response = get_last_bot_response(channel)
-                if last_bot_response:
-                    # Extract property title from last bot response
-                    match = re.search(r"\* \*\*(.*?):\*\*", last_bot_response)
-                    if match:
-                        property_title = match.group(1)
-                        # Get property details from the database
-                        conn = sqlite3.connect(DB_PATH)
-                        conn.row_factory = sqlite3.Row
-                        cur = conn.cursor()
-                        cur.execute("SELECT * FROM properties WHERE title = ?", (property_title,))
-                        row = cur.fetchone()
-                        if row:
-                            property_details = dict(row)
-                        conn.close()
+            
+            # Si hay contexto anterior, usarlo directamente
+            if contexto_anterior and contexto_anterior.get('resultados'):
+                propiedades_contexto = contexto_anterior['resultados']
+                if propiedades_contexto:
+                    # DETECTAR QUÉ PROPIEDAD ESPECÍFICA QUIERE
+                    propiedad_especifica = None
+                    
+                    # Si dice "primero", "primera", etc.
+                    if any(word in text_lower for word in ['primero', 'primera', '1']):
+                        propiedad_especifica = propiedades_contexto[0]
+                        print(f"🎯 Usando primera propiedad del contexto: {propiedad_especifica.get('title')}")
+                    
+                    # Si dice "segundo", "segunda", etc.
+                    elif any(word in text_lower for word in ['segundo', 'segunda', '2']) and len(propiedades_contexto) > 1:
+                        propiedad_especifica = propiedades_contexto[1]
+                        print(f"🎯 Usando segunda propiedad del contexto: {propiedad_especifica.get('title')}")
+                    
+                    # Por defecto, usar la primera
+                    else:
+                        propiedad_especifica = propiedades_contexto[0]
+                        print(f"🎯 Usando primera propiedad por defecto: {propiedad_especifica.get('title')}")
+                    
+                    property_details = propiedad_especifica
+            else:
+                # Try to find the property from the conversation history
+                if historial:
+                    last_bot_response = get_last_bot_response(channel)
+                    if last_bot_response:
+                        # Extract property title from last bot response
+                        match = re.search(r"\* \*\*(.*?):\*\*", last_bot_response)
+                        if match:
+                            property_title = match.group(1)
+                            # Get property details from the database
+                            conn = sqlite3.connect(DB_PATH)
+                            conn.row_factory = sqlite3.Row
+                            cur = conn.cursor()
+                            cur.execute("SELECT * FROM properties WHERE title = ?", (property_title,))
+                            row = cur.fetchone()
+                            if row:
+                                property_details = dict(row)
+                            conn.close()
 
         # 🔥 COMBINAR FILTROS: frontend + detección automática
         
@@ -1214,54 +1246,35 @@ async def chat(request: ChatRequest):
             style_hint = "Respondé de forma explicativa, profesional y cálida como si fuera una consulta web."
 
         # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
-        if es_seguimiento_final and contexto_anterior and contexto_anterior.get('resultados'):
-            # 👇 AGREGAR VERIFICACIÓN DE SEGURIDAD
-            propiedades_contexto = contexto_anterior.get('resultados', [])
+         # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
+        if es_seguimiento_final and (contexto_anterior or property_details):
+            print("🎯 MODO SEGUIMIENTO ACTIVADO")
             
-            if not propiedades_contexto:
-                print("⚠️ Contexto vacío - usando prompt normal")
-                prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
-            
-            else:
-                print(f"🎯 Propiedades en contexto: {len(propiedades_contexto)}")
+            # Si tenemos property_details (de contexto o detección), usar prompt específico
+            if property_details:
+                print(f"🎯 PROPIEDAD ESPECÍFICA: {property_details.get('title')}")
                 
-                # 👇 FILTRAR: Si el usuario menciona una propiedad específica, usar SOLO esa
-                propiedad_especifica = None
-                if "palermo soho" in user_text.lower() or "280.000" in user_text.lower() or "280,000" in user_text.lower():
-                    for prop in propiedades_contexto:
-                        if "soho" in prop.get('title', '').lower() or prop.get('price') == 280000:
-                            propiedad_especifica = prop
-                            break
-                
-                # Si no se menciona específicamente, usar la primera del contexto
-                if not propiedad_especifica and propiedades_contexto:
-                    propiedad_especifica = propiedades_contexto[0]
-                
-                # 👇 DETERMINAR QUÉ PROMPT USAR BASADO EN LA PROPIEDAD ESPECÍFICA
-                if propiedad_especifica:
-                    print(f"🎯 PROPIEDAD ESPECÍFICA SELECCIONADA: {propiedad_especifica.get('title')}")
-                    
-                    detalles_propiedad = f"""
+                detalles_propiedad = f"""
         PROPIEDAD ESPECÍFICA:
-        - Título: {propiedad_especifica.get('title', 'N/A')}
-        - Precio: ${propiedad_especifica.get('price', 'N/A')}
-        - Barrio: {propiedad_especifica.get('neighborhood', 'N/A')}
-        - Ambientes: {propiedad_especifica.get('rooms', 'N/A')}
-        - Metros: {propiedad_especifica.get('sqm', 'N/A')}m²
-        - Operación: {propiedad_especifica.get('operacion', 'N/A')}
-        - Tipo: {propiedad_especifica.get('tipo', 'N/A')}
-        - Descripción: {propiedad_especifica.get('description', 'N/A')}
-        - Dirección: {propiedad_especifica.get('direccion', 'N/A')}
-        - Antigüedad: {propiedad_especifica.get('antiguedad', 'N/A')}
-        - Amenities: {propiedad_especifica.get('amenities', 'N/A')}
-        - Cochera: {propiedad_especifica.get('cochera', 'N/A')}
-        - Balcón: {propiedad_especifica.get('balcon', 'N/A')}
-        - Aire acondicionado: {propiedad_especifica.get('aire_acondicionado', 'N/A')}
-        - Expensas: {propiedad_especifica.get('expensas', 'N/A')}
-        - Estado: {propiedad_especifica.get('estado', 'N/A')}
+        - Título: {property_details.get('title', 'N/A')}
+        - Precio: ${property_details.get('price', 'N/A')}
+        - Barrio: {property_details.get('neighborhood', 'N/A')}
+        - Ambientes: {property_details.get('rooms', 'N/A')}
+        - Metros: {property_details.get('sqm', 'N/A')}m²
+        - Operación: {property_details.get('operacion', 'N/A')}
+        - Tipo: {property_details.get('tipo', 'N/A')}
+        - Descripción: {property_details.get('description', 'N/A')}
+        - Dirección: {property_details.get('direccion', 'N/A')}
+        - Antigüedad: {property_details.get('antiguedad', 'N/A')}
+        - Amenities: {property_details.get('amenities', 'N/A')}
+        - Cochera: {property_details.get('cochera', 'N/A')}
+        - Balcón: {property_details.get('balcon', 'N/A')}
+        - Aire acondicionado: {property_details.get('aire_acondicionado', 'N/A')}
+        - Expensas: {property_details.get('expensas', 'N/A')}
+        - Estado: {property_details.get('estado', 'N/A')}
         """
-                    
-                    prompt = f"""
+                
+                prompt = f"""
         ERES UN ASISTENTE INMOBILIARIO. El usuario está preguntando específicamente sobre ESTA propiedad:
 
         {detalles_propiedad}
@@ -1272,18 +1285,18 @@ async def chat(request: ChatRequest):
         1. Responde EXCLUSIVAMENTE sobre esta propiedad específica
         2. Proporciona TODOS los detalles disponibles listados arriba
         3. NO menciones otras propiedades
-        4. NO preguntes qué detalles quiere - DALE directamente toda la información
-        5. Si faltan datos, menciona solo los que tienes
+        4. NO hagas preguntas adicionales al usuario
+        5. Si faltan datos, menciona "No disponible" para ese campo
         6. {style_hint}
 
-        RESPONDE CON TODOS LOS DETALLES:
+        RESPONDE DIRECTAMENTE CON TODOS LOS DETALLES DE ESTA PROPIEDAD:
         """
-                    print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
-                
-                else:
-                    # Prompt normal para nueva búsqueda
-                    prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
-                    print("🧠 Prompt normal enviado a Gemini")
+                print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
+            
+            else:
+                # Si no hay property_details pero hay contexto, usar prompt normal
+                prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
+                print("🧠 Prompt normal enviado a Gemini")
 
         # 👇 SI NO ES SEGUIMIENTO, USAR PROMPT NORMAL
         else:
