@@ -1190,33 +1190,27 @@ async def chat(request: ChatRequest):
             
             # Si hay contexto anterior, usarlo directamente
             if contexto_anterior and contexto_anterior.get('resultados'):
-                propiedades_contexto = contexto_anterior['resultados']
-                     
-                
-                
-                
-                
+                propiedades_contexto = contexto_anterior['resultados']              
                 if propiedades_contexto:
-                        # DETECTAR QUÉ PROPIEDAD ESPECÍFICA QUIERE
+                    # DETECTAR QUÉ PROPIEDAD ESPECÍFICA QUIERE
                     propiedad_especifica = None
-                    
                     
                     # 1. Detectar por PRECIO específico
                     import re
                     precio_pattern = r'\$?\s*(\d+[.,]?\d*)[\s,]*(?:mil|mil|k|K)?'
                     match_precio = re.search(precio_pattern, user_text)
-                    print(f"🔍 DEBUG Precio - Match: {match_precio}")  # 🔥 AGREGAR ESTE PRINT
+                    print(f"🔍 DEBUG Precio - Match: {match_precio}")
                     
                     if match_precio:
                         precio_texto = match_precio.group(1).replace('.', '').replace(',', '')
-                        print(f"🔍 DEBUG Precio - Texto: {precio_texto}")  # 🔥 AGREGAR ESTE PRINT
+                        print(f"🔍 DEBUG Precio - Texto: {precio_texto}")
                         
                         try:
                             precio_buscado = int(precio_texto)
                             print(f"🎯 Precio detectado en consulta: ${precio_buscado}")
                             
                             for prop in propiedades_contexto:
-                                print(f"🔍 DEBUG - Comparando: {prop.get('title')} - ${prop.get('price')}")  # 🔥 AGREGAR ESTE PRINT
+                                print(f"🔍 DEBUG - Comparando: {prop.get('title')} - ${prop.get('price')}")
                                 if prop.get('price') == precio_buscado:
                                     propiedad_especifica = prop
                                     print(f"🎯 Detectada propiedad por precio: {propiedad_especifica.get('title')} - ${propiedad_especifica.get('price')}")
@@ -1224,7 +1218,7 @@ async def chat(request: ChatRequest):
                         except ValueError as e:
                             print(f"⚠️ No se pudo convertir el precio detectado: {e}")
 
-                    # Detectar por BARRIO específico
+                    # 2. Detectar por BARRIO específico
                     elif not propiedad_especifica:
                         barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "almagro", "villa crespo", "san isidro", "vicente lopez"]
                         for barrio in barrios:
@@ -1237,7 +1231,7 @@ async def chat(request: ChatRequest):
                                 if propiedad_especifica:
                                     break
 
-                    # Detectar por TIPO específico
+                    # 3. Detectar por TIPO específico
                     elif not propiedad_especifica:
                         tipos = ["departamento", "casa", "ph", "terreno"]
                         for tipo in tipos:
@@ -1250,7 +1244,7 @@ async def chat(request: ChatRequest):
                                 if propiedad_especifica:
                                     break
 
-                    # Detectar por NÚMERO (primero, segundo, etc.)
+                    # 4. Detectar por NÚMERO (primero, segundo, etc.)
                     if not propiedad_especifica:
                         if any(word in user_text.lower() for word in ['primero', 'primera', '1']):
                             propiedad_especifica = propiedades_contexto[0]
@@ -1262,12 +1256,13 @@ async def chat(request: ChatRequest):
                             propiedad_especifica = propiedades_contexto[2]
                             print(f"🎯 Detectada tercera propiedad: {propiedad_especifica.get('title')}")
 
-                    # Si no se detecta específicamente, usar la primera del contexto
+                    # 5. Si no se detecta específicamente, usar la primera del contexto
                     if not propiedad_especifica and propiedades_contexto:
                         propiedad_especifica = propiedades_contexto[0]
                         print(f"🎯 Usando primera propiedad por defecto: {propiedad_especifica.get('title')}")
-                               
+                    
                     property_details = propiedad_especifica
+                    print(f"🏠 Propiedad desde contexto: {property_details.get('title', 'N/A')}")       
             else:
                 # Try to find the property from the conversation history
                 if historial:
