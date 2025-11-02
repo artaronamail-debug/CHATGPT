@@ -46,14 +46,7 @@ print(f"   GEMINI_API_KEYS: {os.getenv('GEMINI_API_KEYS', 'NO DEFINIDA')}")
 print("🔍 VARIABLE GEMINI_KEYS específica:")
 print(f"   GEMINI_KEYS: {os.getenv('GEMINI_KEYS', 'NO DEFINIDA')}")
 
-# === DIAGNÓSTICO ANTES DE LLAMAR A GEMINI ===
-print("🔍 Verificando disponibilidad de google.generativeai en /chat...")
-try:
-    import google.generativeai as genai
-    print("✅ google.generativeai disponible en contexto /chat")
-except ImportError as e:
-    print(f"❌ CRÍTICO: google.generativeai NO disponible en /chat: {e}")
-    return {"response": "Error del servidor - módulo no disponible"}
+
 
 # === DIAGNÓSTICO ANTES DE LLAMAR A GEMINI ===
 def detectar_cambio_busqueda(user_text, contexto_anterior):
@@ -1515,6 +1508,15 @@ async def chat(request: ChatRequest):
         if not user_text:
             return {"response": "Por favor ingresa un mensaje válido."}
     
+        # === 🚨 AGREGAR EL DIAGNÓSTICO DE GEMINI JUSTO AQUÍ ===
+        print("📌 Verificando disponibilidad de google.generativeai en /chat...")
+        try:
+            import google.generativeai as genai
+            print("💡 google.generativeai disponible en contexto /chat")
+        except ImportError as e:
+            print(f"✗ CRÍTICO: google.generativeai NO disponible en /chat: {e}")
+            return {"response": "Error del servidor - módulo no disponible"}
+         
         # Diagnóstico para es_solicitud_detalle
         print("🔍 LLAMANDO a es_solicitud_detalle...")
         try:
