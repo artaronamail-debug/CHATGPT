@@ -131,13 +131,19 @@ def diagnosticar_problemas():
 diagnosticar_problemas()
 
 
-# --- CONFIGURACIÓN DE TÉRMINOS (PONER AQUÍ) ---
+# ====================
+# SECCIÓN 2: CONFIGURACIONES 
+# ====================
 terminos_detalle = [
     "especificame", "detallame", "hablame", "indicame", "informame",
     "contame", "decime", "muestrame", "quiero saber", "dame detalles",
     "más información", "info del", "info sobre", "detalles del", "detalles sobre",
     "cuéntame", "explícame", "amplía", "desarrolla"
 ]
+
+# --- AGREGAR ESTOS TÉRMINOS NUEVOS ---
+terminos_venta = ["venta", "comprar", "comprá", "quiero comprar", "en venta", "para comprar"]
+terminos_alquiler = ["alquiler", "alquilar", "alquilá", "quiero alquilar", "para alquilar"]
 
 
 
@@ -208,6 +214,18 @@ def es_solicitud_detalle(texto):
     texto_lower = texto.lower()
     return any(termino in texto_lower for termino in terminos_detalle)
 
+# --- AGREGAR ESTA NUEVA FUNCIÓN ---
+def detectar_operacion(user_text):
+    """Detecta si el usuario quiere alquiler o venta"""
+    texto = user_text.lower()
+    
+    if any(termino in texto for termino in terminos_venta):
+        return "Venta"
+    elif any(termino in texto for termino in terminos_alquiler):
+        return "Alquiler"
+    else:
+        return None  # No se especifica operación
+
 def generar_respuesta_clarificacion(propiedades_filtradas):
     """Genera respuesta cuando no está claro qué propiedad quiere"""
     response = "📋 Veo que quieres más detalles. ¿De cuál propiedad te gustaría que te hable?\n\n"
@@ -216,22 +234,23 @@ def generar_respuesta_clarificacion(propiedades_filtradas):
     response += "\nSolo dime el número o el nombre del barrio que te interesa."
     return response
 
-def generar_detalle_propiedad(propiedad):
-    """Genera respuesta detallada de una propiedad específica"""
-    # ... tu función actual para mostrar detalles de propiedad ...
-    pass
 
-def generar_respuesta_general(propiedades_filtradas):
-    """Genera respuesta general con lista de propiedades"""
-    # ... tu función actual para mostrar lista general ...
-    pass
-
-
+# ====================
+# SECCIÓN 5: LÓGICA PRINCIPAL
+# ====================
 def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
     
     propiedad_especifica = None
     
-    # --- BLOQUE 1: DETECCIÓN DE SOLICITUD DE DETALLES (NUEVO) ---
+    # --- NUEVO: DETECCIÓN DE OPERACIÓN (ALQUILER/VENTA) ---
+    operacion_detectada = detectar_operacion(user_text)
+    if operacion_detectada:
+        print(f"@ Operación detectada: {operacion_detectada}")
+        # Filtrar propiedades por operación
+        propiedades_filtradas = [p for p in propiedades_filtradas 
+                               if p.get('operation_type', '').lower() == operacion_detectada.lower()]
+    
+    # --- BLOQUE 1: DETECCIÓN DE SOLICITUD DE DETALLES ---
     if es_solicitud_detalle(user_text):
         print("@ Es una solicitud de detalles")
         
@@ -252,9 +271,16 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
                     for prop in propiedades_contexto:
                         if (barrio in prop.get('neighborhood', '').lower() or 
                             barrio in prop.get('title', '').lower()):
-                            propiedad_especifica = prop
-                            print(f"@ Detectada propiedad por barrio: {propiedad_especifica.get('title')}")
-                            break
+                            # --- NUEVO: Verificar también la operación ---
+                            if operacion_detectada:
+                                if prop.get('operation_type', '').lower() == operacion_detectada.lower():
+                                    propiedad_especifica = prop
+                            else:
+                                propiedad_especifica = prop
+                            
+                            if propiedad_especifica:
+                                print(f"@ Detectada propiedad por barrio: {propiedad_especifica.get('title')}")
+                                break
                     if propiedad_especifica:
                         break
         
@@ -271,10 +297,18 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
                 for prop in propiedades_contexto:
                     if (barrio in prop.get('neighborhood', '').lower() or 
                         barrio in prop.get('title', '').lower()):
-                        propiedad_especifica = prop
-                        print(f"@ Detectada propiedad por barrio: {propiedad_especifica.get('title')}")
-                        encontrado = True
-                        break
+                        # --- NUEVO: Verificar también la operación ---
+                        if operacion_detectada:
+                            if prop.get('operation_type', '').lower() == operacion_detectada.lower():
+                                propiedad_especifica = prop
+                                encontrado = True
+                        else:
+                            propiedad_especifica = prop
+                            encontrado = True
+                        
+                        if encontrado:
+                            print(f"@ Detectada propiedad por barrio: {propiedad_especifica.get('title')}")
+                            break
                 if encontrado:
                     break
 
@@ -283,7 +317,6 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
         return generar_detalle_propiedad(propiedad_especifica)
     else:
         return generar_respuesta_general(propiedades_filtradas)
-    
 
 
 
