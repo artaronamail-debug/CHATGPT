@@ -252,20 +252,20 @@ metrics = Metrics()
 # ====================
 # SECCIÓN 4: FUNCIONES AUXILIARES (DESPUÉS DE CLASES)
 # ====================
-def es_solicitud_detalle(texto):
-    """Detecta si el usuario quiere detalles de una propiedad"""
-    try:
-        if not texto or not isinstance(texto, str):
-            return False
-        texto_lower = texto.lower().strip()
-        for termino in terminos_detalle:
-            if termino in texto_lower:
-                return True
-        return False
-    except Exception as e:
-        print(f"Error en es_solicitud_detalle: {e}")
-        return False
+# En la sección donde manejas solicitudes de detalles ambiguas
 
+if es_solicitud_detalle(user_text) and not propiedad_especifica:
+    
+    # Detectar si la solicitud es ambigua
+    menciona_numero = any(word in user_text.lower() for word in ['primero', 'segundo', 'tercero', '1', '2', '3'])
+    menciona_barrio = any(barrio in user_text.lower() for barrio in barrios)
+    menciona_precio = '$' in user_text or any(word in user_text.lower() for word in ['precio', 'costo', 'valor'])
+    
+    es_ambigua = not (menciona_numero or menciona_barrio or menciona_precio)
+    
+    if es_ambigua and propiedades_filtradas and len(propiedades_filtradas) > 1:
+        print("🎯 SOLICITUD AMBIGUA - Pidiendo clarificación")
+        return generar_respuesta_clarificacion(propiedades_filtradas)
 
 # --- RESETEAR BUSQUEDA ---
 def detectar_cambio_busqueda(user_text, contexto_anterior):
@@ -299,6 +299,22 @@ def detectar_cambio_busqueda(user_text, contexto_anterior):
             return True
     
     return False
+    
+    
+    
+    # Si menciona tipos de propiedad diferentes al contexto anterior
+    tipos_propiedad = ["departamento", "casa", "ph", "terreno", "casaquinta", "monoambiente", "estudio"]
+    tipo_anterior = None
+    
+    if contexto_anterior.get('resultados'):
+        primera_prop = contexto_anterior['resultados'][0]
+        tipo_anterior = primera_prop.get('tipo', '').lower()
+    
+    for tipo in tipos_propiedad:
+        if tipo in texto and tipo != tipo_anterior:
+            return True
+    
+    return False
 
 
 
@@ -315,10 +331,13 @@ def detectar_operacion(user_text):
         return None  # No se especifica operación
 
 def generar_respuesta_clarificacion(propiedades_filtradas):
-    """Genera respuesta cuando no está claro qué propiedad quiere"""
+    """Genera respuesta cuando no está claro qué propiedad quiere el usuario"""
     response = "📋 Veo que quieres más detalles. ¿De cuál propiedad te gustaría que te hable?\n\n"
+    
     for i, prop in enumerate(propiedades_filtradas, 1):
-        response += f"{i}. **{prop.get('title')}** - {prop.get('neighborhood')} - ${prop.get('price'):,}\n"
+        precio_formateado = f"${prop.get('price', 0):,}"
+        response += f"{i}. **{prop.get('title')}** - {prop.get('neighborhood')} - {precio_formateado} - {prop.get('rooms', '?')} ambientes\n"
+    
     response += "\nSolo dime el número o el nombre del barrio que te interesa."
     return response
 
