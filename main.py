@@ -1702,9 +1702,32 @@ async def chat(request: ChatRequest):
                         print(f"🎯 Detectada tercera propiedad: {propiedad_especifica.get('title')}")
 
                 # 5. Si no se detecta específicamente, usar la primera del contexto
-                if not propiedad_especifica and propiedades_contexto:
+                
+                
+                # 5. Si no se detecta específicamente, PERO SÍ se detectó un barrio, buscar en el contexto
+                if not propiedad_especifica and any(barrio in user_text.lower() for barrio in barrios):
+                    print("🎯 BARRIO DETECTADO PERO NO ENCONTRADO - Buscando en contexto...")
+                    barrio_detectado = None
+                    for barrio in barrios:
+                        if barrio in user_text.lower():
+                            barrio_detectado = barrio
+                            break
+                    
+                    if barrio_detectado:
+                        for prop in propiedades_contexto:
+                            if (barrio_detectado in prop.get('neighborhood', '').lower() or 
+                                barrio_detectado in prop.get('title', '').lower()):
+                                propiedad_especifica = prop
+                                print(f"✅ Propiedad encontrada por barrio: {propiedad_especifica.get('title')}")
+                                break
+
+                # 6. SOLO SI REALMENTE NO HAY NADA ESPECÍFICO, usar la primera
+                elif not propiedad_especifica and propiedades_contexto:
                     propiedad_especifica = propiedades_contexto[0]
                     print(f"🎯 Usando primera propiedad por defecto: {propiedad_especifica.get('title')}")
+                
+                
+                
                 
                 property_details = propiedad_especifica
                 print(f"🏠 Propiedad seleccionada: {property_details.get('title', 'N/A')}")
