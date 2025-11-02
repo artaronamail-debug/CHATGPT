@@ -367,15 +367,47 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
                         break
         
         if not propiedad_especifica and propiedades_filtradas:
+            # DIAGNÓSTICO PRIMERO
+            print(f"🔍 DIAGNÓSTICO - user_text: '{user_text}'")
+            print(f"🔍 DIAGNÓSTICO - Buscando barrios en texto...")
+            
             menciona_numero = any(word in user_text.lower() for word in ['primero', 'segundo', 'tercero', '1', '2', '3'])
             menciona_barrio = any(barrio in user_text.lower() for barrio in barrios)
             menciona_precio = '$' in user_text or any(word in user_text.lower() for word in ['precio', 'costo', 'valor'])
             
-            es_ambigua = not (menciona_numero or menciona_barrio or menciona_precio)
+            print(f"🔍 DIAGNÓSTICO - menciona_numero: {menciona_numero}")
+            print(f"🔍 DIAGNÓSTICO - menciona_barrio: {menciona_barrio}") 
+            print(f"🔍 DIAGNÓSTICO - menciona_precio: {menciona_precio}")
             
-            if es_ambigua and len(propiedades_filtradas) > 1:
-                print("🎯 SOLICITUD AMBIGUA - Pidiendo clarificación")
-                return generar_respuesta_clarificacion(propiedades_filtradas)
+            # 🔥 NUEVA LÓGICA CORREGIDA:
+            
+            # 1. Si menciona BARRIO específico, buscar esa propiedad
+            if menciona_barrio and not propiedad_especifica:
+                print("🎯 DETECTADO BARRIO ESPECÍFICO - Buscando propiedad...")
+                for barrio in barrios:
+                    if barrio in user_text.lower():
+                        print(f"🎯 Barrio detectado: {barrio}")
+                        # Buscar propiedad de ese barrio en los resultados
+                        for prop in propiedades_filtradas:
+                            if (barrio in prop.get('neighborhood', '').lower() or 
+                                barrio in prop.get('title', '').lower()):
+                                propiedad_especifica = prop
+                                print(f"✅ Propiedad encontrada por barrio: {propiedad_especifica.get('title')}")
+                                break
+                        if propiedad_especifica:
+                            break
+            
+            # 2. Si menciona NÚMERO, usar esa propiedad
+            elif menciona_numero and not propiedad_especifica:
+                print("🎯 DETECTADO NÚMERO - Usando propiedad por número...")
+                # ... tu lógica existente para números ...
+            
+            # 3. Si la solicitud es AMBIGUA (no menciona nada específico)
+            elif not (menciona_numero or menciona_barrio or menciona_precio):
+                es_ambigua = True
+                if es_ambigua and len(propiedades_filtradas) > 1:
+                    print("🎯 SOLICITUD AMBIGUA - Pidiendo clarificación")
+                    return generar_respuesta_clarificacion(propiedades_filtradas)
     
     # --- BLOQUE 2: DETECCIÓN POR BARRIO ---
     if not propiedad_especifica:
