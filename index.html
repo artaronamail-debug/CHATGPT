@@ -545,9 +545,47 @@
     </div>
 
     <script>
-        const API_URL = "https://dante-propiedades-backend.onrender.com/chat";
         
+        
+    const API_URL = "https://dante-propiedades-backend.onrender.com/chat";
+
+// 🔥 FUNCIÓN TEMPORAL - Arreglar error aplicarFiltros
+function aplicarFiltros() {
+    console.log('🔍 Aplicar filtros - Función temporal');
     
+    const filtros = obtenerFiltrosSeleccionados();
+    
+    if (Object.keys(filtros).length === 0) {
+        alert('Seleccioná al menos un filtro para buscar.');
+        return;
+    }
+
+    // Construir mensaje natural para el chat
+    const descripcionFiltros = formatearFiltrosParaMensaje(filtros);
+    let mensajeNatural = `Buscar propiedades para ${filtros.operacion || 'alquiler o venta'}`;
+    
+    if (filtros.neighborhood) {
+        mensajeNatural += ` en ${filtros.neighborhood}`;
+    }
+    if (filtros.tipo) {
+        mensajeNatural += `, tipo ${filtros.tipo}`;
+    }
+    if (filtros.min_rooms) {
+        mensajeNatural += `, mínimo ${filtros.min_rooms} ambientes`;
+    }
+    if (filtros.min_price || filtros.max_price) {
+        mensajeNatural += `, precio`;
+        if (filtros.min_price) mensajeNatural += ` desde $${filtros.min_price}`;
+        if (filtros.max_price) mensajeNatural += ` hasta $${filtros.max_price}`;
+    }
+    
+    // Poner el mensaje en el input y enviar
+    const input = document.getElementById('userInput');
+    input.value = mensajeNatural;
+    
+    // Enviar automáticamente
+    send();
+}
 
 // 🔥 MODO DEMO - Datos de ejemplo para probar el frontend
 const datosDemo = {
@@ -1147,7 +1185,7 @@ if (!dataMejorada.search_performed && esSeguimiento) {
 try {
     addMessage(mensajeFinal);
     statusText.textContent = 'Conectado';
-} catch (error) {
+} catch (error) {  // ← CON ESPACIO
     console.error('Error:', error);
     addMessage('⚠️ No se pudo conectar con el servidor. Por favor, intentá nuevamente en unos momentos.');
     statusText.textContent = 'Error de conexión';
