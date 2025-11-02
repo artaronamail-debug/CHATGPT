@@ -1,4 +1,6 @@
 """Backend para Dante Propiedades: procesamiento de consultas, filtros y generación de respuestas vía Gemini."""
+import streamlit as st
+import pandas as pd
 import os
 import re
 import json
@@ -15,6 +17,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
 from config import API_KEYS, ENDPOINT, WORKING_MODEL as MODEL
+from dotenv import load_dotenv
 
 
 # Después de las importaciones, agrega:
