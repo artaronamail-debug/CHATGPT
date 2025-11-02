@@ -921,70 +921,106 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
             print(f"🏢 Operación detectada: {filters['operacion']}")
             break
     
-    # 🔥🔥🔥 CORRECCIÓN GENÉRICA: DETECTAR AMBIENTES PRIMERO, LUEGO PRECIO
+    # 🔥🔥🔥 CORRECCIÓN CRÍTICA: DETECTAR AMBIENTES PRIMERO, LUEGO PRECIO CON VALIDACIÓN
     
     # 1. PRIMERO detectar ambientes (cualquier número)
-    rooms_match = re.search(r"(\d+)\s*amb", text_lower)
-    if rooms_match:
-        ambientes = int(rooms_match.group(1))
-        filters["min_rooms"] = ambientes
-        filters["max_rooms"] = ambientes  # Queremos exactamente ese número
-        print(f"🚪 Ambientes detectados: {filters['min_rooms']}")
+    ambientes_patterns = [
+        r"(\d+)\s*ambientes",
+        r"(\d+)\s*amb",
+        r"(\d+)\s*dorm",
+        r"(\d+)\s*habitaciones",
+        r"el de (\d+)\s*amb",
+        r"los de (\d+)\s*amb",
+        r"de (\d+)\s*amb",
+        r"con (\d+)\s*amb"
+    ]
     
-    # 2. LUEGO detectar precio, pero EXCLUIR números que ya se usaron para ambientes
-    numero_ambientes_usado = filters.get('min_rooms')
+    for pattern in ambientes_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            try:
+                ambientes = int(match.group(1))
+                filters["min_rooms"] = ambientes
+                filters["max_rooms"] = ambientes
+                print(f"🚪 Ambientes detectados: {filters['min_rooms']}")
+                break
+            except ValueError:
+                continue
     
+    # 2. LUEGO detectar precio, pero con validación inteligente
+    numero_ambientes_detectado = filters.get('min_rooms')
+    
+    # 🔥 PATRONES MÁS ESPECÍFICOS PARA PRECIO (evitan falsos positivos)
     precio_patterns = [
-        r"hasta \$?\s*([0-9\.]+)",           # "hasta $280000"
-        r"máximo \$?\s*([0-9\.]+)",          # "máximo 280000" 
-        r"precio.*?\$?\s*([0-9\.]+)",        # "precio 280000"
-        r"menos de \$?\s*([0-9\.]+)",        # "menos de 280000"
-        r"\$?\s*([0-9\.]+)\s*pesos",         # "280000 pesos"
-        r"de \$?\s*([0-9\.]+)",              # "de $280000"
-        r"valor.*?\$?\s*([0-9\.]+)",         # "valor 280000"
+        r"hasta \$?\s*(\d{3,}(?:\.\d{3})*)",     # "hasta $280000" (mínimo 3 dígitos)
+        r"máximo \$?\s*(\d{3,}(?:\.\d{3})*)",    # "máximo 280000" (mínimo 3 dígitos)
+        r"precio.*?\$?\s*(\d{3,}(?:\.\d{3})*)",  # "precio 280000" (mínimo 3 dígitos)
+        r"menos de \$?\s*(\d{3,}(?:\.\d{3})*)",  # "menos de 280000" (mínimo 3 dígitos)
+        r"\$?\s*(\d{3,}(?:\.\d{3})*)\s*pesos",   # "280000 pesos" (mínimo 3 dígitos)
+        r"(\d{3,})\s*dólares",                   # "300 dólares" (mínimo 3 dígitos + "dólares")
+        r"(\d{3,})\s*usd",                       # "300 usd" (mínimo 3 dígitos + "usd")
+        r"(\d{3,})\s*u\$s",                      # "300 u$s" (mínimo 3 dígitos + "u$s")
     ]
     
     for pattern in precio_patterns:
         match = re.search(pattern, text_lower)
         if match:
             try:
-                precio = int(match.group(1).replace('.', ''))
-                # 🔥 NO usar este número si ya se usó para ambientes
-                if precio != numero_ambientes_usado:
+                precio_texto = match.group(1).replace('.', '')
+                precio = int(precio_texto)
+                
+                # 🔥 VALIDACIÓN INTELIGENTE:
+                # - Si es el mismo número que ambientes, probablemente sea error
+                # - Si es menor a 1000 y NO son dólares, probablemente sea error
+                mismo_que_ambientes = precio == numero_ambientes_detectado
+                es_dolares = any(palabra in text_lower for palabra in ['dólar', 'dolar', 'usd', 'u$s'])
+                precio_muy_bajo = precio < 1000 and not es_dolares
+                
+                if not mismo_que_ambientes and not precio_muy_bajo:
                     filters["max_price"] = precio
-                    print(f"💰 Precio máximo detectado: ${precio}")
+                    moneda = "USD" if es_dolares else "ARS"
+                    print(f"💰 Precio máximo detectado: {moneda} ${precio}")
                     break
                 else:
-                    print(f"🛑 Ignorando precio ${precio} - ya se usó para ambientes")
+                    print(f"🛑 Ignorando precio ${precio} - probable error (mismo que ambientes o muy bajo)")
+                    
             except ValueError:
                 continue
     
     # Precio mínimo (misma lógica)
-    min_price_match = re.search(r"desde \$?\s*([0-9\.]+)", text_lower)
+    min_price_match = re.search(r"desde \$?\s*(\d{3,}(?:\.\d{3})*)", text_lower)
     if min_price_match:
         try:
             min_price = int(min_price_match.group(1).replace('.', ''))
-            if min_price != numero_ambientes_usado:
+            es_dolares_min = any(palabra in text_lower for palabra in ['dólar', 'dolar', 'usd', 'u$s'])
+            precio_muy_bajo_min = min_price < 1000 and not es_dolares_min
+            
+            if min_price != numero_ambientes_detectado and not precio_muy_bajo_min:
                 filters["min_price"] = min_price
-                print(f"💰 Precio mínimo detectado: ${min_price}")
+                moneda = "USD" if es_dolares_min else "ARS"
+                print(f"💰 Precio mínimo detectado: {moneda} ${min_price}")
             else:
-                print(f"🛑 Ignorando precio mínimo ${min_price} - ya se usó para ambientes")
+                print(f"🛑 Ignorando precio mínimo ${min_price} - probable error")
         except ValueError:
             pass
     
     # Metros cuadrados
     sqm_match = re.search(r"(\d+)\s*m2", text_lower) or re.search(r"(\d+)\s*metros", text_lower)
     if sqm_match:
-        metros = int(sqm_match.group(1))
-        # Verificar que no sea el mismo número usado para ambientes
-        if metros != numero_ambientes_usado:
-            filters["min_sqm"] = metros
-            print(f"📏 Metros cuadrados detectados: {filters['min_sqm']}")
-        else:
-            print(f"🛑 Ignorando metros {metros} - ya se usó para ambientes")
+        try:
+            metros = int(sqm_match.group(1))
+            # Verificar que no sea el mismo número usado para ambientes
+            if metros != numero_ambientes_detectado:
+                filters["min_sqm"] = metros
+                print(f"📏 Metros cuadrados detectados: {filters['min_sqm']}m²")
+            else:
+                print(f"🛑 Ignorando metros {metros} - mismo número que ambientes")
+        except ValueError:
+            pass
 
     print(f"🎯 Filtros finales detectados: {filters}")
     return filters
+
 
 def detectar_ambientes_especificos_seguimiento(text_lower: str) -> Dict[str, Any]:
     """Detección ESPECIALIZADA para consultas de seguimiento con ambientes específicos - VERSIÓN GENÉRICA"""
@@ -1594,10 +1630,19 @@ async def chat(request: ChatRequest):
         # 🔥🔥🔥 CORRECCIÓN GENÉRICA PARA FILTROS ERRÓNEOS
         print(f"🔍 VERIFICANDO FILTROS: {filters}")
 
-        # Si hay un precio muy bajo y también ambientes detectados, probablemente sea error
-        if filters.get('max_price') and filters.get('max_price') < 1000 and filters.get('min_rooms'):
-            print(f"🛑 CORRECCIÓN: Precio ${filters['max_price']} parece ser error - eliminando")
-            filters.pop('max_price', None)
+        # Verificar si el precio detectado es probablemente un error
+        if filters.get('max_price') and filters.get('min_rooms'):
+            mismo_numero = filters['max_price'] == filters['min_rooms']
+            precio_muy_bajo = filters['max_price'] < 1000
+            texto_tiene_amb = any(palabra in user_text.lower() for palabra in [' amb', 'ambientes', 'dorm'])
+            texto_tiene_dolares = any(palabra in user_text.lower() for palabra in ['usd', 'dólar', 'dolar', 'u$s'])
+            
+            # Es error si: mismo número + precio bajo + contexto de ambientes + NO son dólares
+            es_error = (mismo_numero and precio_muy_bajo and texto_tiene_amb and not texto_tiene_dolares)
+            
+            if es_error:
+                print(f"🛑 CORRECCIÓN: Precio ${filters['max_price']} es error (detectado como ambientes) - eliminando")
+                filters.pop('max_price', None)
 
         # Si hay min_rooms pero no max_rooms, establecer ambos iguales
         if filters.get('min_rooms') and not filters.get('max_rooms'):
