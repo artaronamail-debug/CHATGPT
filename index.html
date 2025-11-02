@@ -1146,9 +1146,8 @@ if (!dataMejorada.search_performed && esSeguimiento) {
 // MOSTRAR EL MENSAJE FINAL
 try {
     addMessage(mensajeFinal);
-statusText.textContent = 'Conectado';
-
-catch (error) {
+    statusText.textContent = 'Conectado';
+} catch (error) {
     console.error('Error:', error);
     addMessage('⚠️ No se pudo conectar con el servidor. Por favor, intentá nuevamente en unos momentos.');
     statusText.textContent = 'Error de conexión';
@@ -1156,7 +1155,6 @@ catch (error) {
     hideTypingIndicator();
     button.disabled = false;
     input.focus();
-}
 }
 
 // Event listeners
