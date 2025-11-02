@@ -921,10 +921,22 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
             print(f"🏢 Operación detectada: {filters['operacion']}")
             break
     
-    # 🔥 DETECCIÓN GENÉRICA DE PRECIO
+    # 🔥🔥🔥 CORRECCIÓN GENÉRICA: DETECTAR AMBIENTES PRIMERO, LUEGO PRECIO
+    
+    # 1. PRIMERO detectar ambientes (cualquier número)
+    rooms_match = re.search(r"(\d+)\s*amb", text_lower)
+    if rooms_match:
+        ambientes = int(rooms_match.group(1))
+        filters["min_rooms"] = ambientes
+        filters["max_rooms"] = ambientes  # Queremos exactamente ese número
+        print(f"🚪 Ambientes detectados: {filters['min_rooms']}")
+    
+    # 2. LUEGO detectar precio, pero EXCLUIR números que ya se usaron para ambientes
+    numero_ambientes_usado = filters.get('min_rooms')
+    
     precio_patterns = [
         r"hasta \$?\s*([0-9\.]+)",           # "hasta $280000"
-        r"máximo \$?\s*([0-9\.]+)",          # "máximo 280000"
+        r"máximo \$?\s*([0-9\.]+)",          # "máximo 280000" 
         r"precio.*?\$?\s*([0-9\.]+)",        # "precio 280000"
         r"menos de \$?\s*([0-9\.]+)",        # "menos de 280000"
         r"\$?\s*([0-9\.]+)\s*pesos",         # "280000 pesos"
@@ -937,33 +949,39 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
         if match:
             try:
                 precio = int(match.group(1).replace('.', ''))
-                filters["max_price"] = precio
-                print(f"💰 Precio máximo detectado: ${precio}")
-                break
+                # 🔥 NO usar este número si ya se usó para ambientes
+                if precio != numero_ambientes_usado:
+                    filters["max_price"] = precio
+                    print(f"💰 Precio máximo detectado: ${precio}")
+                    break
+                else:
+                    print(f"🛑 Ignorando precio ${precio} - ya se usó para ambientes")
             except ValueError:
                 continue
     
-    # Precio mínimo
+    # Precio mínimo (misma lógica)
     min_price_match = re.search(r"desde \$?\s*([0-9\.]+)", text_lower)
     if min_price_match:
         try:
             min_price = int(min_price_match.group(1).replace('.', ''))
-            filters["min_price"] = min_price
-            print(f"💰 Precio mínimo detectado: ${min_price}")
+            if min_price != numero_ambientes_usado:
+                filters["min_price"] = min_price
+                print(f"💰 Precio mínimo detectado: ${min_price}")
+            else:
+                print(f"🛑 Ignorando precio mínimo ${min_price} - ya se usó para ambientes")
         except ValueError:
             pass
-    
-    # Ambientes
-    rooms_match = re.search(r"(\d+)\s*amb", text_lower)
-    if rooms_match:
-        filters["min_rooms"] = int(rooms_match.group(1))
-        print(f"🚪 Ambientes detectados: {filters['min_rooms']}")
     
     # Metros cuadrados
     sqm_match = re.search(r"(\d+)\s*m2", text_lower) or re.search(r"(\d+)\s*metros", text_lower)
     if sqm_match:
-        filters["min_sqm"] = int(sqm_match.group(1))
-        print(f"📏 Metros cuadrados detectados: {filters['min_sqm']}")
+        metros = int(sqm_match.group(1))
+        # Verificar que no sea el mismo número usado para ambientes
+        if metros != numero_ambientes_usado:
+            filters["min_sqm"] = metros
+            print(f"📏 Metros cuadrados detectados: {filters['min_sqm']}")
+        else:
+            print(f"🛑 Ignorando metros {metros} - ya se usó para ambientes")
 
     print(f"🎯 Filtros finales detectados: {filters}")
     return filters
@@ -1557,18 +1575,36 @@ async def chat(request: ChatRequest):
         # 🔥 COMBINAR FILTROS: frontend + detección automática
         
         # 1. Agregar filtros del frontend si existen
+        
+        
+        
+# 🔥 COMBINAR FILTROS: frontend + detección automática
+
+# 1. Agregar filtros del frontend si existen
         if filters_from_frontend:
             filters.update(filters_from_frontend)
             print(f"🎯 Filtros aplicados desde frontend: {filters_from_frontend}")
-        
+
         # 2. Detectar filtros adicionales del texto
         detected_filters = detect_filters(text_lower)
         if detected_filters:
             filters.update(detected_filters)
             print(f"🎯 Filtros detectados del texto: {detected_filters}")
 
+        # 🔥🔥🔥 CORRECCIÓN GENÉRICA PARA FILTROS ERRÓNEOS
+        print(f"🔍 VERIFICANDO FILTROS: {filters}")
+
+        # Si hay un precio muy bajo y también ambientes detectados, probablemente sea error
+        if filters.get('max_price') and filters.get('max_price') < 1000 and filters.get('min_rooms'):
+            print(f"🛑 CORRECCIÓN: Precio ${filters['max_price']} parece ser error - eliminando")
+            filters.pop('max_price', None)
+
+        # Si hay min_rooms pero no max_rooms, establecer ambos iguales
+        if filters.get('min_rooms') and not filters.get('max_rooms'):
+            filters['max_rooms'] = filters['min_rooms']
+            print(f"🎯 Estableciendo max_rooms = min_rooms = {filters['min_rooms']}")
+
         # Si hay filtros, realizar búsqueda
-        
         # 👇 EVITAR BÚSQUEDA SI HAY CONTEXTO DE SEGUIMIENTO
         if filters and not property_details and not (es_seguimiento_final and contexto_anterior):
             print("🎯 Activando búsqueda con filtros combinados...")
@@ -1584,7 +1620,6 @@ async def chat(request: ChatRequest):
                 results = contexto_anterior['resultados']
                 print(f"📋 Usando {len(results)} propiedades del contexto anterior")
                 search_performed = True
-        
         # Tono según canal
         if channel == "whatsapp":
             style_hint = "Respondé de forma breve, directa y cálida como si fuera un mensaje de WhatsApp."
