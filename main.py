@@ -1609,6 +1609,12 @@ async def chat(request: ChatRequest):
             
             print("🎯 Usando contexto del frontend para seguimiento - CON DETECCIÓN MEJORADA")
             propiedades_contexto = contexto_anterior['resultados']
+            
+            print(f"🔍 PRE-CHECK - propiedad_especifica: {propiedad_especifica}")
+            print(f"🔍 PRE-CHECK - Barrios detectados en texto: {[barrio for barrio in barrios if barrio in user_text.lower()]}")
+            print(f"🔍 PRE-CHECK - user_text: '{user_text}'")
+            
+            print("🎯 Usando contexto del frontend para seguimiento - CON DETECCIÓN MEJORADA")
             if propiedades_contexto:
                 # 🔥 REEMPLAZAR CON LÓGICA DE DETECCIÓN INTELIGENTE:
                 propiedad_especifica = None
