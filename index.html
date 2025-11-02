@@ -1144,7 +1144,8 @@ if (!dataMejorada.search_performed && esSeguimiento) {
 }
 
 // MOSTRAR EL MENSAJE FINAL
-addMessage(mensajeFinal);
+try {
+    addMessage(mensajeFinal);
 statusText.textContent = 'Conectado';
 
 catch (error) {
@@ -1156,7 +1157,7 @@ catch (error) {
     button.disabled = false;
     input.focus();
 }
-
+}
 
 // Event listeners
 button.addEventListener('click', send);
