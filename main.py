@@ -1598,6 +1598,15 @@ async def chat(request: ChatRequest):
 
         # ==== SECCIÓN DE SEGUIMIENTO CON CONTEXTO ====
         if es_seguimiento and contexto_anterior and contexto_anterior.get('resultados'):
+            print("🎯 SEGUIMIENTO CON CONTEXTO ACTIVADO")
+            print(f"🔍 CONTEXTO - Propiedades en contexto: {len(contexto_anterior['resultados'])}")
+            
+            # MOSTRAR QUÉ PROPIEDADES HAY EN EL CONTEXTO
+            for i, prop in enumerate(contexto_anterior['resultados']):
+                print(f"🔍 CONTEXTO {i+1}: {prop.get('title')} - {prop.get('neighborhood')}")
+            
+            
+            
             print("🎯 Usando contexto del frontend para seguimiento - CON DETECCIÓN MEJORADA")
             propiedades_contexto = contexto_anterior['resultados']
             if propiedades_contexto:
