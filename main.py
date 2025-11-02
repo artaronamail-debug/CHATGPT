@@ -828,6 +828,10 @@ def log_conversation(user_text, response_text, channel="web", response_time=0.0,
     except Exception as e:
         print(f"❌ Error en log: {e}")
 
+
+
+
+
 def detect_filters(text_lower: str) -> Dict[str, Any]:
     """Detecta y extrae filtros del texto del usuario - VERSIÓN MEJORADA Y GENÉRICA"""
     import re
@@ -964,7 +968,36 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
     print(f"🎯 Filtros finales detectados: {filters}")
     return filters
 
-
+def detectar_ambientes_especificos_seguimiento(text_lower: str) -> Dict[str, Any]:
+    """Detección ESPECIALIZADA para consultas de seguimiento con ambientes específicos"""
+    import re
+    filters = {}
+    
+    # 🔥 PATRONES ESPECÍFICOS para "el de X ambientes", "los de X amb", etc.
+    patrones_ambientes_especificos = [
+        r"el de (\d+)\s*amb",           # "el de 2 ambientes"
+        r"los de (\d+)\s*amb",          # "los de 2 ambientes"  
+        r"propiedad de (\d+)\s*amb",    # "propiedad de 2 ambientes"
+        r"departamento de (\d+)\s*amb", # "departamento de 2 ambientes"
+        r"casa de (\d+)\s*amb",         # "casa de 2 ambientes"
+        r"el de (\d+)\s*dorm",          # "el de 2 dormitorios"
+        r"de (\d+)\s*amb",              # "de 2 ambientes"
+        r"con (\d+)\s*amb",             # "con 2 ambientes"
+    ]
+    
+    for pattern in patrones_ambientes_especificos:
+        match = re.search(pattern, text_lower)
+        if match:
+            try:
+                ambientes = int(match.group(1))
+                filters["min_rooms"] = ambientes
+                filters["max_rooms"] = ambientes  # Queremos exactamente ese número
+                print(f"🎯 DETECCIÓN ESPECÍFICA: {ambientes} ambientes solicitados")
+                return filters  # Retornar inmediatamente si detectamos
+            except ValueError:
+                continue
+    
+    return filters
 
 
 
@@ -1093,7 +1126,38 @@ def debug_info():
     return info
 
 
-
+def detectar_ambientes_especificos_seguimiento(text_lower: str) -> Dict[str, Any]:
+    """Detección ESPECIALIZADA para consultas de seguimiento con ambientes específicos"""
+    import re
+    filters = {}
+    
+    # 🔥 PATRONES ESPECÍFICOS para "el de X ambientes"
+    patrones_ambientes_especificos = [
+        r"el de (\d+)\s*amb",           # "el de 2 ambientes"
+        r"los de (\d+)\s*amb",          # "los de 2 ambientes"  
+        r"propiedad de (\d+)\s*amb",    # "propiedad de 2 ambientes"
+        r"departamento de (\d+)\s*amb", # "departamento de 2 ambientes"
+        r"casa de (\d+)\s*amb",         # "casa de 2 ambientes"
+        r"el de (\d+)\s*dorm",          # "el de 2 dormitorios"
+        r"de (\d+)\s*amb",              # "de 2 ambientes"
+        r"con (\d+)\s*amb",             # "con 2 ambientes"
+        r"que tenga (\d+)\s*amb",       # "que tenga 2 ambientes"
+        r"el (\d+)\s*amb",              # "el 2 ambientes"
+    ]
+    
+    for pattern in patrones_ambientes_especificos:
+        match = re.search(pattern, text_lower)
+        if match:
+            try:
+                ambientes = int(match.group(1))
+                filters["min_rooms"] = ambientes
+                filters["max_rooms"] = ambientes  # Queremos exactamente ese número
+                print(f"🎯 DETECCIÓN ESPECÍFICA SEGUIMIENTO: {ambientes} ambientes solicitados")
+                return filters  # Retornar inmediatamente si detectamos
+            except ValueError:
+                continue
+    
+    return filters
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -1174,48 +1238,67 @@ async def chat(request: ChatRequest):
 
 
         if es_seguimiento and contexto_anterior and contexto_anterior.get('resultados'):
-            print("🎯 Usando contexto del frontend para seguimiento")
+            print("🎯 Usando contexto del frontend para seguimiento - CON DETECCIÓN MEJORADA")
             propiedades_contexto = contexto_anterior['resultados']
             if propiedades_contexto:
                 # 🔥 REEMPLAZAR CON LÓGICA DE DETECCIÓN INTELIGENTE:
                 propiedad_especifica = None
                 
+                # 🔥🔥🔥 NUEVO: 0. DETECCIÓN POR AMBIENTES ESPECÍFICOS (PRIMERA PRIORIDAD)
+                filters_ambientes = detectar_ambientes_especificos_seguimiento(text_lower)
+                if "min_rooms" in filters_ambientes:
+                    ambientes_solicitados = filters_ambientes["min_rooms"]
+                    print(f"🎯 FILTRANDO por {ambientes_solicitados} ambientes específicos")
+                    
+                    # Filtrar propiedades que tengan exactamente esos ambientes
+                    propiedades_filtradas = [
+                        prop for prop in propiedades_contexto 
+                        if prop.get('rooms') == ambientes_solicitados
+                    ]
+                    
+                    if propiedades_filtradas:
+                        propiedad_especifica = propiedades_filtradas[0]
+                        print(f"✅ Encontrada propiedad con {ambientes_solicitados} ambientes: {propiedad_especifica.get('title')}")
+                    else:
+                        print(f"❌ No hay propiedades con {ambientes_solicitados} ambientes en el contexto")
+                
                 # 1. Detectar por PRECIO específico
-                import re
-                precio_pattern = r'(?:\$?\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(?:mil|mil|k|K)?'
-                match_precio = re.search(precio_pattern, user_text)
-                print(f"🔍 DEBUG Precio - Match: {match_precio}")
-                print(f"🔍 DEBUG Precio - Texto original: '{user_text}'")
-                
-                if match_precio:
-                    precio_texto = match_precio.group(1)
-                    print(f"🔍 DEBUG Precio - Texto capturado: '{precio_texto}'")
+                if not propiedad_especifica:
+                    import re
+                    precio_pattern = r'(?:\$?\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(?:mil|mil|k|K)?'
+                    match_precio = re.search(precio_pattern, user_text)
+                    print(f"🔍 DEBUG Precio - Match: {match_precio}")
+                    print(f"🔍 DEBUG Precio - Texto original: '{user_text}'")
                     
-                    precio_limpio = precio_texto.replace('.', '').replace(',', '')
-                    print(f"🔍 DEBUG Precio - Texto limpio: '{precio_limpio}'")
-                    
-                    try:
-                        precio_buscado = int(precio_limpio)
-                        print(f"🎯 Precio detectado en consulta: ${precio_buscado}")
+                    if match_precio:
+                        precio_texto = match_precio.group(1)
+                        print(f"🔍 DEBUG Precio - Texto capturado: '{precio_texto}'")
                         
-                        for prop in propiedades_contexto:
-                            print(f"🔍 DEBUG - Comparando: {prop.get('title')} - ${prop.get('price')}")
-                            if prop.get('price') == precio_buscado:
-                                propiedad_especifica = prop
-                                print(f"🎯 Detectada propiedad por precio: {propiedad_especifica.get('title')} - ${propiedad_especifica.get('price')}")
-                                break
-                        if not propiedad_especifica:
-                            print(f"⚠️ No se encontró propiedad con precio ${precio_buscado}")
-                    except ValueError as e:
-                        print(f"⚠️ No se pudo convertir el precio detectado: {e}")
-                
+                        precio_limpio = precio_texto.replace('.', '').replace(',', '')
+                        print(f"🔍 DEBUG Precio - Texto limpio: '{precio_limpio}'")
+                        
+                        try:
+                            precio_buscado = int(precio_limpio)
+                            print(f"🎯 Precio detectado en consulta: ${precio_buscado}")
+                            
+                            for prop in propiedades_contexto:
+                                print(f"🔍 DEBUG - Comparando: {prop.get('title')} - ${prop.get('price')}")
+                                if prop.get('price') == precio_buscado:
+                                    propiedad_especifica = prop
+                                    print(f"🎯 Detectada propiedad por precio: {propiedad_especifica.get('title')} - ${propiedad_especifica.get('price')}")
+                                    break
+                            if not propiedad_especifica:
+                                print(f"⚠️ No se encontró propiedad con precio ${precio_buscado}")
+                        except ValueError as e:
+                            print(f"⚠️ No se pudo convertir el precio detectado: {e}")
+                    
                 # 2. Detectar por BARRIO específico
                 if not propiedad_especifica:
                     barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "soho","almagro", "villa crespo", "san isidro", "vicente lopez"]
                     for barrio in barrios:
                         if barrio in user_text.lower():
                             for prop in propiedades_contexto:
-                               if (barrio in prop.get('neighborhood', '').lower() or 
+                            if (barrio in prop.get('neighborhood', '').lower() or 
                                     barrio in prop.get('title', '').lower()):
                                     propiedad_especifica = prop
                                     print(f"🎯 Detectada propiedad por barrio: {propiedad_especifica.get('title')} - {propiedad_especifica.get('neighborhood')}")
@@ -1255,15 +1338,15 @@ async def chat(request: ChatRequest):
                 
                 property_details = propiedad_especifica
                 print(f"🏠 Propiedad seleccionada: {property_details.get('title', 'N/A')}")
-              
-        
+                
+            
         # PRIORIDAD 2: Si no hay contexto, usar detección por palabras clave MEJORADA
         elif any(keyword in text_lower for keyword in [
             "más información", "mas informacion", "más detalles", "mas detalles", 
             "brindar", "dime más", "cuéntame más", "información del", "detalles del",
             "primero", "primera", "este", "esta", "ese", "esa", "el de", "la de"
         ]):
-            print("🔍 Detectado seguimiento por palabras clave")
+            print("🔍 Detectado seguimiento por palabras clave - CON DETECCIÓN MEJORADA")
             
             # Si hay contexto anterior, usarlo directamente
             if contexto_anterior and contexto_anterior.get('resultados'):
@@ -1273,30 +1356,47 @@ async def chat(request: ChatRequest):
                     propiedad_especifica = None
                     import re
                     
-                    # 1. Detectar por PRECIO específico
-                    import re
-                    precio_pattern = r'(?:\$?\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(?:mil|mil|k|K)?'
-                    match_precio = re.search(precio_pattern, user_text)
-                    print(f"🔍 DEBUG Precio - Match: {match_precio}")
-                    
-                    if match_precio:
-                        precio_texto = match_precio.group(1).replace('.', '').replace(',', '')
-                        print(f"🔍 DEBUG Precio - Texto: {precio_texto}")
+                    # 🔥🔥🔥 NUEVO: 0. DETECCIÓN POR AMBIENTES ESPECÍFICOS (PRIMERA PRIORIDAD)
+                    filters_ambientes = detectar_ambientes_especificos_seguimiento(text_lower)
+                    if "min_rooms" in filters_ambientes:
+                        ambientes_solicitados = filters_ambientes["min_rooms"]
+                        print(f"🎯 FILTRANDO por {ambientes_solicitados} ambientes específicos")
                         
-                        try:
-                            precio_buscado = int(precio_texto)
-                            print(f"🎯 Precio detectado en consulta: ${precio_buscado}")
+                        # Filtrar propiedades que tengan exactamente esos ambientes
+                        propiedades_filtradas = [
+                            prop for prop in propiedades_contexto 
+                            if prop.get('rooms') == ambientes_solicitados
+                        ]
+                        
+                        if propiedades_filtradas:
+                            propiedad_especifica = propiedades_filtradas[0]
+                            print(f"✅ Encontrada propiedad con {ambientes_solicitados} ambientes: {propiedad_especifica.get('title')}")
+                        else:
+                            print(f"❌ No hay propiedades con {ambientes_solicitados} ambientes en el contexto")
+                    
+                    # 1. Detectar por PRECIO específico
+                    if not propiedad_especifica:
+                        precio_pattern = r'(?:\$?\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(?:mil|mil|k|K)?'
+                        match_precio = re.search(precio_pattern, user_text)
+                        print(f"🔍 DEBUG Precio - Match: {match_precio}")
+                        
+                        if match_precio:
+                            precio_texto = match_precio.group(1).replace('.', '').replace(',', '')
+                            print(f"🔍 DEBUG Precio - Texto: {precio_texto}")
                             
-                            for prop in propiedades_contexto:
-                                print(f"🔍 DEBUG - Comparando: {prop.get('title')} - ${prop.get('price')}")
-                                if prop.get('price') == precio_buscado:
-                                    propiedad_especifica = prop
-                                    print(f"🎯 Detectada propiedad por precio: {propiedad_especifica.get('title')} - ${propiedad_especifica.get('price')}")
-                                    break
-                        except ValueError as e:
-                            print(f"⚠️ No se pudo convertir el precio detectado: {e}")
-                   
-                    # 🔥 CORRECCIÓN CRÍTICA: AGREGAR 'elif' AQUÍ
+                            try:
+                                precio_buscado = int(precio_texto)
+                                print(f"🎯 Precio detectado en consulta: ${precio_buscado}")
+                                
+                                for prop in propiedades_contexto:
+                                    print(f"🔍 DEBUG - Comparando: {prop.get('title')} - ${prop.get('price')}")
+                                    if prop.get('price') == precio_buscado:
+                                        propiedad_especifica = prop
+                                        print(f"🎯 Detectada propiedad por precio: {propiedad_especifica.get('title')} - ${propiedad_especifica.get('price')}")
+                                        break
+                            except ValueError as e:
+                                print(f"⚠️ No se pudo convertir el precio detectado: {e}")
+                    
                     # 2. Detectar por BARRIO específico
                     if not propiedad_especifica:
                         barrios = ["colegiales", "palermo", "soho","boedo", "belgrano", "recoleta", "almagro", "villa crespo", "san isidro", "vicente lopez"]
@@ -1312,7 +1412,7 @@ async def chat(request: ChatRequest):
                                     break
 
                     # 3. Detectar por TIPO específico
-                    elif not propiedad_especifica:
+                    if not propiedad_especifica:
                         tipos = ["departamento", "casa", "ph", "terreno"]
                         for tipo in tipos:
                             if tipo in user_text.lower():
@@ -1404,6 +1504,10 @@ async def chat(request: ChatRequest):
 
         # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
          # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
+        
+        
+        
+        
         if es_seguimiento_final and (contexto_anterior or property_details):
             print("🎯 MODO SEGUIMIENTO ACTIVADO")
             
