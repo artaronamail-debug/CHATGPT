@@ -348,7 +348,7 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
                 print(f"@ Detectada propiedad por número: {idx + 1}")
         
         if not propiedad_especifica:
-            barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "soho", "almagro", "villa crespo", "san isidro", "vicente lopez"]
+            barrios = ["colegiales", "palermo", "boedo", "belgrano", "caballito", "recoleta", "soho", "almagro", "villa crespo", "san isidro", "vicente lopez"]
             for barrio in barrios:
                 if barrio in user_text.lower():
                     for prop in propiedades_contexto:
@@ -379,7 +379,7 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
     
     # --- BLOQUE 2: DETECCIÓN POR BARRIO ---
     if not propiedad_especifica:
-        barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "soho", "almagro", "villa crespo", "san isidro", "vicente lopez"]
+        barrios = ["colegiales", "palermo", "boedo", "belgrano", "caballito","recoleta", "soho", "almagro", "villa crespo", "san isidro", "vicente lopez"]
         encontrado = False
         for barrio in barrios:
             if barrio in user_text.lower():
