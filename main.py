@@ -55,6 +55,43 @@ except ImportError as e:
     print(f"❌ CRÍTICO: google.generativeai NO disponible en /chat: {e}")
     return {"response": "Error del servidor - módulo no disponible"}
 
+# === DIAGNÓSTICO ANTES DE LLAMAR A GEMINI ===
+def detectar_cambio_busqueda(user_text, contexto_anterior):
+    """Detecta si el usuario quiere cambiar completamente de búsqueda"""
+    if not contexto_anterior:
+        return True
+    
+    texto = user_text.lower()
+    
+    # Palabras que indican NUEVA búsqueda (no seguimiento)
+    palabras_nueva_busqueda = [
+        "busco", "quiero", "necesito", "encontrar", "ver", "mostrar", "listar",
+        "otro", "diferente", "nuevo", "nueva", "cambiar", "ahora", "ahora quiero"
+    ]
+    
+    # Si el texto empieza con palabras de nueva búsqueda
+    for palabra in palabras_nueva_busqueda:
+        if texto.startswith(palabra):
+            return True
+    
+    # Si menciona tipos de propiedad diferentes al contexto anterior
+    tipos_propiedad = ["departamento", "casa", "ph", "terreno", "casaquinta", "monoambiente", "estudio"]
+    tipo_anterior = None
+    
+    if contexto_anterior.get('resultados'):
+        primera_prop = contexto_anterior['resultados'][0]
+        tipo_anterior = primera_prop.get('tipo', '').lower()
+    
+    for tipo in tipos_propiedad:
+        if tipo in texto and tipo != tipo_anterior:
+            return True
+    
+    return False
+
+
+
+
+
 
 def call_gemini_with_rotation(prompt: str) -> str:
     import google.generativeai as genai
@@ -235,6 +272,42 @@ def es_solicitud_detalle(texto):
     except Exception as e:
         print(f"Error en es_solicitud_detalle: {e}")
         return False
+
+
+# --- RESETEAR BUSQUEDA ---
+def detectar_cambio_busqueda(user_text, contexto_anterior):
+    """Detecta si el usuario quiere cambiar completamente de búsqueda"""
+    if not contexto_anterior:
+        return True
+    
+    texto = user_text.lower()
+    
+    # Palabras que indican NUEVA búsqueda (no seguimiento)
+    palabras_nueva_busqueda = [
+        "busco", "quiero", "necesito", "encontrar", "ver", "mostrar", "listar",
+        "otro", "diferente", "nuevo", "nueva", "cambiar", "ahora", "ahora quiero"
+    ]
+    
+    # Si el texto empieza con palabras de nueva búsqueda
+    for palabra in palabras_nueva_busqueda:
+        if texto.startswith(palabra):
+            return True
+    
+    # Si menciona tipos de propiedad diferentes al contexto anterior
+    tipos_propiedad = ["departamento", "casa", "ph", "terreno", "casaquinta", "monoambiente", "estudio"]
+    tipo_anterior = None
+    
+    if contexto_anterior.get('resultados'):
+        primera_prop = contexto_anterior['resultados'][0]
+        tipo_anterior = primera_prop.get('tipo', '').lower()
+    
+    for tipo in tipos_propiedad:
+        if tipo in texto and tipo != tipo_anterior:
+            return True
+    
+    return False
+
+
 
 # --- AGREGAR ESTA NUEVA FUNCIÓN ---
 def detectar_operacion(user_text):
