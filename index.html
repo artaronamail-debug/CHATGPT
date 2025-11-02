@@ -885,53 +885,79 @@
                 const data = await response.json();
                 console.log('✅ Respuesta completa:', data);
 
+                // 🔥 MEJOR MANEJO DE RESPUESTAS CON CONTEXTO - ESTRATEGIA COMBINADA
+                function aplicarEstrategiaCombinada(data) {
+                    if (!data.propiedades || data.propiedades.length === 0) {
+                        return {
+                            ...data,
+                            response: `🔍 **No encontré propiedades exactas**\n\n` +
+                                    `Pero tengo alternativas que podrían interesarte:\n\n` +
+                                    `🏠 **Propiedades destacadas:**\n` +
+                                    `• Palermo: Departamentos desde $280,000\n` +
+                                    `• Recoleta: Opciones premium disponibles\n` +
+                                    `• Belgrano: PHs y casas con financiamiento\n\n` +
+                                    `📞 **¿Buscás algo específico?**\n` +
+                                    `Contactanos por WhatsApp para acceso exclusivo.`
+                        };
+                    }
+                    
+                    const mensajeOriginal = data.response;
+                    
+                    // Detectar cuando la IA está "justificando" propiedades no exactas
+                    const indicadoresNoExacto = ['aunque', 'podría ser', 'sin embargo', 'alternativa', 'excelente opción si'];
+                    const esCoincidenciaNoExacta = indicadoresNoExacto.some(indicator => 
+                        mensajeOriginal.toLowerCase().includes(indicator)
+                    );
+                    
+                    if (esCoincidenciaNoExacta) {
+                        return {
+                            ...data,
+                            response: `🔍 **Búsqueda en nuestra base**\n\n` +
+                                    `No encontré coincidencias exactas, pero te muestro alternativas disponibles:\n\n` +
+                                    `${mensajeOriginal}\n\n` +
+                                    `💡 **¿Por qué considerar estas opciones?**\n` +
+                                    `• Ubicación privilegiada y valorización segura\n` +
+                                    `• Espacio adaptable a tus necesidades\n` +
+                                    `• Buen potencial de inversión o alquiler\n\n` +
+                                    `📞 **¿Querés que busquemos algo más específico?**\n` +
+                                    `Contactanos para acceso a propiedades no publicadas.`
+                        };
+                    }
+                    
+                    return data;
+                }
+
+                // Aplicar la estrategia combinada
+                const dataMejorada = aplicarEstrategiaCombinada(data);
+
+                // VARIABLE PARA EL MENSAJE FINAL
+                let mensajeFinal = '';
+
                 // MEJOR MANEJO DE RESPUESTAS CON CONTEXTO
-                if (data.response) {
-                    let mensajeMejorado = data.response;
+                if (dataMejorada.response) {
+                    let mensajeMejorado = dataMejorada.response;
                     
                     // AGREGAR INFORMACIÓN SOBRE RESULTADOS Y ACTUALIZAR CONTEXTO
-                   // AGREGAR INFORMACIÓN SOBRE RESULTADOS Y ACTUALIZAR CONTEXTO
-                    if (data.search_performed && data.results_count !== null) {
-                        if (data.results_count > 0) {
-                            mensajeMejorado += `\n\n---\n**🎯 BÚSQUEDA EXITOSA**\n📊 **Encontré ${data.results_count} propiedades** que coinciden con tu búsqueda.`;
+                    if (dataMejorada.search_performed && dataMejorada.results_count !== null) {
+                        if (dataMejorada.results_count > 0) {
+                            mensajeMejorado += `\n\n---\n**🎯 BÚSQUEDA EXITOSA**\n📊 **Encontré ${dataMejorada.results_count} propiedades** que coinciden con tu búsqueda.`;
                             
                             // ACTUALIZAR CONTEXTO con los nuevos resultados
-                            // 👇 AGREGAR LOGS CRÍTICOS PARA DEBUG DEL CONTEXTO
                             console.log('🔍 DEBUG - ANTES DE ACTUALIZAR CONTEXTO:', {
-                                data_propiedades: data.propiedades,
-                                data_propiedades_length: data.propiedades ? data.propiedades.length : 0,
-                                data_completa: data,
+                                data_propiedades: dataMejorada.propiedades,
+                                data_propiedades_length: dataMejorada.propiedades ? dataMejorada.propiedades.length : 0,
+                                data_completa: dataMejorada,
                                 filtrosSeleccionados: filtrosSeleccionados
                             });
                             
                             // ACTUALIZAR CONTEXTO con los nuevos resultados
-                            if (data.propiedades && data.propiedades.length > 0) {
+                            if (dataMejorada.propiedades && dataMejorada.propiedades.length > 0) {
                                 console.log('✅ CONDICIÓN CUMPLIDA - Actualizando contexto');
-                                actualizarContexto(data.propiedades, filtrosSeleccionados, 'busqueda');
+                                actualizarContexto(dataMejorada.propiedades, filtrosSeleccionados, 'busqueda');
                             } else {
                                 console.log('❌ CONDICIÓN FALLADA - No hay propiedades para actualizar contexto');
-                                console.log('💡 Data recibida:', data);
-                                
-                                // 👇 SOLUCIÓN TEMPORAL - Crear contexto manual si no hay datos
-                                // if (data.search_performed && data.results_count > 0) {
-                                 //   console.log('🛠️ CREANDO CONTEXTO MANUAL');
-                                 //   const propiedadesManuales = [{
-                                  //      title: "Departamento en Palermo SoHo",
-                                  //      price: 280000,
-                                  //      neighborhood: "Palermo",
-                                 //       rooms: 2,
-                                  //      sqm: 68,
-                                 //       operacion: "alquiler",
-                                 //      tipo: "departamento",
-                                 //       description: "Departamento de 2 ambientes en Palermo SoHo"
-                                  //  }];
-                                 //   actualizarContexto(propiedadesManuales, filtrosSeleccionados, 'busqueda');
-                                //}
+                                console.log('💡 Data recibida:', dataMejorada);
                             }
-
-
-
-
 
                             // AGREGAR INSTRUCCIÓN DE SEGUIMIENTO SOLO SI ES NUEVA BÚSQUEDA Y HAY RESULTADOS
                             if (!esSeguimiento) {
@@ -945,19 +971,26 @@
                         }
                     }
                     
-                    // Si no se realizó búsqueda pero es seguimiento, mantener contexto
-                    if (!data.search_performed && esSeguimiento) {
-                        // Mantener el contexto anterior para seguir la conversación
-                        console.log('🔄 Manteniendo contexto para seguimiento');
+                    // AGREGAR MENSAJE DE SEGUIMIENTO AL CONTEXTO (si existe esta función)
+                    if (typeof agregarMensajeSeguimiento !== 'undefined' && dataMejorada.search_performed && dataMejorada.results_count > 0) {
+                        agregarMensajeSeguimiento();
                     }
                     
-                    addMessage(mensajeMejorado);
-                } else if (data.error) {
-                    addMessage(`⚠️ Error: ${data.error}`);
+                    mensajeFinal = mensajeMejorado;
+                } else if (dataMejorada.error) {
+                    mensajeFinal = `⚠️ Error: ${dataMejorada.error}`;
                 } else {
-                    addMessage('❌ Respuesta inesperada del servidor');
+                    mensajeFinal = '❌ Respuesta inesperada del servidor';
                 }
 
+                // Si no se realizó búsqueda pero es seguimiento, mantener contexto
+                if (!dataMejorada.search_performed && esSeguimiento) {
+                    // Mantener el contexto anterior para seguir la conversación
+                    console.log('🔄 Manteniendo contexto para seguimiento');
+                }
+                
+                // MOSTRAR EL MENSAJE FINAL
+                addMessage(mensajeFinal);
                 statusText.textContent = 'Conectado';
                 
             } catch (error) {
