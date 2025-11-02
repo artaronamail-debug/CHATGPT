@@ -47,8 +47,10 @@ print("🔍 VARIABLE GEMINI_KEYS específica:")
 print(f"   GEMINI_KEYS: {os.getenv('GEMINI_KEYS', 'NO DEFINIDA')}")
 
 
+# ====================
+# SECCIÓN: FUNCIONES AUXILIARES COMPLETAS
+# ====================
 
-# === DIAGNÓSTICO ANTES DE LLAMAR A GEMINI ===
 def detectar_cambio_busqueda(user_text, contexto_anterior):
     """Detecta si el usuario quiere cambiar completamente de búsqueda"""
     if not contexto_anterior:
@@ -84,6 +86,68 @@ def detectar_cambio_busqueda(user_text, contexto_anterior):
 
 
 
+def es_solicitud_detalle(texto):
+    """Detecta si el usuario quiere detalles de una propiedad"""
+    if not texto or not isinstance(texto, str):
+        return False
+    texto_lower = texto.lower().strip()
+    
+    # Bucle explícito para evitar problemas de scope
+    for termino in terminos_detalle:
+        if termino in texto_lower:
+            return True
+    return False
+
+def generar_detalle_propiedad(propiedad):
+    """Genera respuesta detallada de una propiedad específica"""
+    # Implementación básica - puedes mejorarla
+    detalles = f"""
+🏠 **{propiedad.get('title', 'N/A')}**
+📍 **Barrio:** {propiedad.get('neighborhood', 'N/A')}
+💰 **Precio:** ${propiedad.get('price', 'N/A'):,}
+🛏️ **Ambientes:** {propiedad.get('rooms', 'N/A')}
+📏 **Metros:** {propiedad.get('sqm', 'N/A')}m²
+🏢 **Operación:** {propiedad.get('operacion', 'N/A')}
+📋 **Tipo:** {propiedad.get('tipo', 'N/A')}
+📝 **Descripción:** {propiedad.get('description', 'N/A')}
+    """
+    return detalles
+
+def generar_respuesta_clarificacion(propiedades_filtradas):
+    """Genera respuesta cuando no está claro qué propiedad quiere el usuario"""
+    response = "📋 Veo que quieres más detalles. ¿De cuál propiedad te gustaría que te hable?\n\n"
+    
+    for i, prop in enumerate(propiedades_filtradas, 1):
+        precio_formateado = f"${prop.get('price', 0):,}"
+        response += f"{i}. **{prop.get('title')}** - {prop.get('neighborhood')} - {precio_formateado} - {prop.get('rooms', '?')} ambientes\n"
+    
+    response += "\nSolo dime el número o el nombre del barrio que te interesa."
+    return response
+
+
+
+def generar_respuesta_general(propiedades_filtradas):
+    """Genera respuesta general con lista de propiedades"""
+    if not propiedades_filtradas:
+        return "❌ No encontré propiedades que coincidan con tu búsqueda."
+    
+    response = "🔍 **Propiedades encontradas:**\n\n"
+    for i, prop in enumerate(propiedades_filtradas, 1):
+        response += f"{i}. **{prop.get('title')}** - {prop.get('neighborhood')} - ${prop.get('price', 0):,} - {prop.get('rooms', '?')} ambientes\n"
+    
+    response += "\n💡 **¿Necesitás más información?** Podés preguntar:\n• 'Más detalles sobre el primero'\n• '¿Tiene fotos el departamento en Palermo?'\n• 'Contacto para la propiedad de $280,000'"
+    return response
+
+def detectar_operacion(user_text):
+    """Detecta si el usuario quiere alquiler o venta"""
+    texto = user_text.lower()
+    
+    if any(termino in texto for termino in terminos_venta):
+        return "Venta"
+    elif any(termino in texto for termino in terminos_alquiler):
+        return "Alquiler"
+    else:
+        return None
 
 
 def call_gemini_with_rotation(prompt: str) -> str:
@@ -252,94 +316,9 @@ metrics = Metrics()
 # ====================
 # SECCIÓN 4: FUNCIONES AUXILIARES (DESPUÉS DE CLASES)
 # ====================
-# En la sección donde manejas solicitudes de detalles ambiguas
 
-if es_solicitud_detalle(user_text) and not propiedad_especifica:
-    
-    # Detectar si la solicitud es ambigua
-    menciona_numero = any(word in user_text.lower() for word in ['primero', 'segundo', 'tercero', '1', '2', '3'])
-    menciona_barrio = any(barrio in user_text.lower() for barrio in barrios)
-    menciona_precio = '$' in user_text or any(word in user_text.lower() for word in ['precio', 'costo', 'valor'])
-    
-    es_ambigua = not (menciona_numero or menciona_barrio or menciona_precio)
-    
-    if es_ambigua and propiedades_filtradas and len(propiedades_filtradas) > 1:
-        print("🎯 SOLICITUD AMBIGUA - Pidiendo clarificación")
-        return generar_respuesta_clarificacion(propiedades_filtradas)
+# --- SOLO UNA VEZ esta función ---
 
-# --- RESETEAR BUSQUEDA ---
-def detectar_cambio_busqueda(user_text, contexto_anterior):
-    """Detecta si el usuario quiere cambiar completamente de búsqueda"""
-    if not contexto_anterior:
-        return True
-    
-    texto = user_text.lower()
-    
-    # Palabras que indican NUEVA búsqueda (no seguimiento)
-    palabras_nueva_busqueda = [
-        "busco", "quiero", "necesito", "encontrar", "ver", "mostrar", "listar",
-        "otro", "diferente", "nuevo", "nueva", "cambiar", "ahora", "ahora quiero"
-    ]
-    
-    # Si el texto empieza con palabras de nueva búsqueda
-    for palabra in palabras_nueva_busqueda:
-        if texto.startswith(palabra):
-            return True
-    
-    # Si menciona tipos de propiedad diferentes al contexto anterior
-    tipos_propiedad = ["departamento", "casa", "ph", "terreno", "casaquinta", "monoambiente", "estudio"]
-    tipo_anterior = None
-    
-    if contexto_anterior.get('resultados'):
-        primera_prop = contexto_anterior['resultados'][0]
-        tipo_anterior = primera_prop.get('tipo', '').lower()
-    
-    for tipo in tipos_propiedad:
-        if tipo in texto and tipo != tipo_anterior:
-            return True
-    
-    return False
-    
-    
-    
-    # Si menciona tipos de propiedad diferentes al contexto anterior
-    tipos_propiedad = ["departamento", "casa", "ph", "terreno", "casaquinta", "monoambiente", "estudio"]
-    tipo_anterior = None
-    
-    if contexto_anterior.get('resultados'):
-        primera_prop = contexto_anterior['resultados'][0]
-        tipo_anterior = primera_prop.get('tipo', '').lower()
-    
-    for tipo in tipos_propiedad:
-        if tipo in texto and tipo != tipo_anterior:
-            return True
-    
-    return False
-
-
-
-# --- AGREGAR ESTA NUEVA FUNCIÓN ---
-def detectar_operacion(user_text):
-    """Detecta si el usuario quiere alquiler o venta"""
-    texto = user_text.lower()
-    
-    if any(termino in texto for termino in terminos_venta):
-        return "Venta"
-    elif any(termino in texto for termino in terminos_alquiler):
-        return "Alquiler"
-    else:
-        return None  # No se especifica operación
-
-def generar_respuesta_clarificacion(propiedades_filtradas):
-    """Genera respuesta cuando no está claro qué propiedad quiere el usuario"""
-    response = "📋 Veo que quieres más detalles. ¿De cuál propiedad te gustaría que te hable?\n\n"
-    
-    for i, prop in enumerate(propiedades_filtradas, 1):
-        precio_formateado = f"${prop.get('price', 0):,}"
-        response += f"{i}. **{prop.get('title')}** - {prop.get('neighborhood')} - {precio_formateado} - {prop.get('rooms', '?')} ambientes\n"
-    
-    response += "\nSolo dime el número o el nombre del barrio que te interesa."
-    return response
 
 
 # ====================
@@ -349,11 +328,10 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
     
     propiedad_especifica = None
     
-    # --- NUEVO: DETECCIÓN DE OPERACIÓN (ALQUILER/VENTA) ---
+    # --- DETECCIÓN DE OPERACIÓN ---
     operacion_detectada = detectar_operacion(user_text)
     if operacion_detectada:
         print(f"@ Operación detectada: {operacion_detectada}")
-        # Filtrar propiedades por operación
         propiedades_filtradas = [p for p in propiedades_filtradas 
                                if p.get('operation_type', '').lower() == operacion_detectada.lower()]
     
@@ -361,7 +339,6 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
     if es_solicitud_detalle(user_text):
         print("@ Es una solicitud de detalles")
         
-        # Intentar detectar por número (ej: "el primero", "el 1")
         import re
         numeros = re.findall(r'\b(\d+)\b', user_text)
         if numeros and propiedades_filtradas:
@@ -370,7 +347,6 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
                 propiedad_especifica = propiedades_filtradas[idx]
                 print(f"@ Detectada propiedad por número: {idx + 1}")
         
-        # Si no hay número, buscar por barrio
         if not propiedad_especifica:
             barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "soho", "almagro", "villa crespo", "san isidro", "vicente lopez"]
             for barrio in barrios:
@@ -378,7 +354,6 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
                     for prop in propiedades_contexto:
                         if (barrio in prop.get('neighborhood', '').lower() or 
                             barrio in prop.get('title', '').lower()):
-                            # --- NUEVO: Verificar también la operación ---
                             if operacion_detectada:
                                 if prop.get('operation_type', '').lower() == operacion_detectada.lower():
                                     propiedad_especifica = prop
@@ -391,11 +366,18 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
                     if propiedad_especifica:
                         break
         
-        # Si aún no se detectó, pedir clarificación
         if not propiedad_especifica and propiedades_filtradas:
-            return generar_respuesta_clarificacion(propiedades_filtradas)
-
-    # --- BLOQUE 2: DETECCIÓN POR BARRIO (TU CÓDIGO ORIGINAL) ---
+            menciona_numero = any(word in user_text.lower() for word in ['primero', 'segundo', 'tercero', '1', '2', '3'])
+            menciona_barrio = any(barrio in user_text.lower() for barrio in barrios)
+            menciona_precio = '$' in user_text or any(word in user_text.lower() for word in ['precio', 'costo', 'valor'])
+            
+            es_ambigua = not (menciona_numero or menciona_barrio or menciona_precio)
+            
+            if es_ambigua and len(propiedades_filtradas) > 1:
+                print("🎯 SOLICITUD AMBIGUA - Pidiendo clarificación")
+                return generar_respuesta_clarificacion(propiedades_filtradas)
+    
+    # --- BLOQUE 2: DETECCIÓN POR BARRIO ---
     if not propiedad_especifica:
         barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "soho", "almagro", "villa crespo", "san isidro", "vicente lopez"]
         encontrado = False
@@ -404,7 +386,6 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
                 for prop in propiedades_contexto:
                     if (barrio in prop.get('neighborhood', '').lower() or 
                         barrio in prop.get('title', '').lower()):
-                        # --- NUEVO: Verificar también la operación ---
                         if operacion_detectada:
                             if prop.get('operation_type', '').lower() == operacion_detectada.lower():
                                 propiedad_especifica = prop
@@ -418,16 +399,12 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
                             break
                 if encontrado:
                     break
-
+    
     # --- BLOQUE 3: GENERAR RESPUESTA FINAL ---
     if propiedad_especifica:
         return generar_detalle_propiedad(propiedad_especifica)
     else:
         return generar_respuesta_general(propiedades_filtradas)
-
-
-
-
 @asynccontextmanager
 async def lifespan(app):
     print("🔄 Iniciando ciclo de vida...")
@@ -1463,46 +1440,6 @@ def debug_info():
             info["properties_json"] = f"Error: {e}"
     
     return info
-
-
-def detectar_ambientes_especificos_seguimiento(text_lower: str) -> Dict[str, Any]:
-    """Detección ESPECIALIZADA para consultas de seguimiento con ambientes específicos"""
-    import re
-    filters = {}
-    
-    print(f"🔍 DEBUG AMBIENTES - Texto recibido: '{text_lower}'")
-    
-    # 🔥 PATRONES ESPECÍFICOS para "el de X ambientes"
-    patrones_ambientes_especificos = [
-        r"el de (\d+)\s*amb",           # "el de 2 ambientes"
-        r"los de (\d+)\s*amb",          # "los de 2 ambientes"  
-        r"propiedad de (\d+)\s*amb",    # "propiedad de 2 ambientes"
-        r"departamento de (\d+)\s*amb", # "departamento de 2 ambientes"
-        r"casa de (\d+)\s*amb",         # "casa de 2 ambientes"
-        r"el de (\d+)\s*dorm",          # "el de 2 dormitorios"
-        r"de (\d+)\s*amb",              # "de 2 ambientes"
-        r"con (\d+)\s*amb",             # "con 2 ambientes"
-        r"que tenga (\d+)\s*amb",       # "que tenga 2 ambientes"
-        r"el (\d+)\s*amb",              # "el 2 ambientes"
-        r"(\d+)\s*ambientes",           # "2 ambientes"
-    ]
-    
-    for i, pattern in enumerate(patrones_ambientes_especificos):
-        match = re.search(pattern, text_lower)
-        print(f"🔍 DEBUG AMBIENTES - Pattern {i}: '{pattern}' -> Match: {match is not None}")
-        if match:
-            try:
-                ambientes = int(match.group(1))
-                filters["min_rooms"] = ambientes
-                filters["max_rooms"] = ambientes
-                print(f"🎯 DETECCIÓN ESPECÍFICA SEGUIMIENTO: {ambientes} ambientes solicitados")
-                return filters
-            except ValueError:
-                print(f"⚠️ ERROR convirtiendo ambientes: {match.group(1)}")
-                continue
-    
-    print(f"🔍 DEBUG AMBIENTES - Ningún patrón detectó ambientes")
-    return filters
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
