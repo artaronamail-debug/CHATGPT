@@ -610,7 +610,11 @@ const datosDemo = {
     }
 };
         
-        
+   // 🔥 FUNCIÓN TEMPORAL - Arreglar error aplicarFiltros
+function aplicarFiltros() {
+    console.log('🔍 Aplicar filtros - Función temporal');
+    alert('Función de filtros en desarrollo. Por ahora usá el chat directamente.');
+}     
         
         
         
@@ -1143,7 +1147,7 @@ if (!dataMejorada.search_performed && esSeguimiento) {
 addMessage(mensajeFinal);
 statusText.textContent = 'Conectado';
 
-} catch (error) {
+catch (error) {
     console.error('Error:', error);
     addMessage('⚠️ No se pudo conectar con el servidor. Por favor, intentá nuevamente en unos momentos.');
     statusText.textContent = 'Error de conexión';
@@ -1152,7 +1156,7 @@ statusText.textContent = 'Conectado';
     button.disabled = false;
     input.focus();
 }
-}
+
 
 // Event listeners
 button.addEventListener('click', send);
