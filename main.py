@@ -131,6 +131,17 @@ def diagnosticar_problemas():
 diagnosticar_problemas()
 
 
+# --- CONFIGURACIÓN DE TÉRMINOS (PONER AQUÍ) ---
+terminos_detalle = [
+    "especificame", "detallame", "hablame", "indicame", "informame",
+    "contame", "decime", "muestrame", "quiero saber", "dame detalles",
+    "más información", "info del", "info sobre", "detalles del", "detalles sobre",
+    "cuéntame", "explícame", "amplía", "desarrolla"
+]
+
+
+
+
 
 # ✅ MODELOS DE DATOS PYDANTIC
 class ChatRequest(BaseModel):
@@ -187,6 +198,95 @@ class Metrics:
 
 # ✅ INICIALIZACIÓN
 metrics = Metrics()
+
+
+# ====================
+# SECCIÓN 4: FUNCIONES AUXILIARES (DESPUÉS DE CLASES)
+# ====================
+def es_solicitud_detalle(texto):
+    """Detecta si el usuario quiere detalles de una propiedad"""
+    texto_lower = texto.lower()
+    return any(termino in texto_lower for termino in terminos_detalle)
+
+def generar_respuesta_clarificacion(propiedades_filtradas):
+    """Genera respuesta cuando no está claro qué propiedad quiere"""
+    response = "📋 Veo que quieres más detalles. ¿De cuál propiedad te gustaría que te hable?\n\n"
+    for i, prop in enumerate(propiedades_filtradas, 1):
+        response += f"{i}. **{prop.get('title')}** - {prop.get('neighborhood')} - ${prop.get('price'):,}\n"
+    response += "\nSolo dime el número o el nombre del barrio que te interesa."
+    return response
+
+def generar_detalle_propiedad(propiedad):
+    """Genera respuesta detallada de una propiedad específica"""
+    # ... tu función actual para mostrar detalles de propiedad ...
+    pass
+
+def generar_respuesta_general(propiedades_filtradas):
+    """Genera respuesta general con lista de propiedades"""
+    # ... tu función actual para mostrar lista general ...
+    pass
+
+
+def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
+    
+    propiedad_especifica = None
+    
+    # --- BLOQUE 1: DETECCIÓN DE SOLICITUD DE DETALLES (NUEVO) ---
+    if es_solicitud_detalle(user_text):
+        print("@ Es una solicitud de detalles")
+        
+        # Intentar detectar por número (ej: "el primero", "el 1")
+        import re
+        numeros = re.findall(r'\b(\d+)\b', user_text)
+        if numeros and propiedades_filtradas:
+            idx = int(numeros[0]) - 1
+            if 0 <= idx < len(propiedades_filtradas):
+                propiedad_especifica = propiedades_filtradas[idx]
+                print(f"@ Detectada propiedad por número: {idx + 1}")
+        
+        # Si no hay número, buscar por barrio
+        if not propiedad_especifica:
+            barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "soho", "almagro", "villa crespo", "san isidro", "vicente lopez"]
+            for barrio in barrios:
+                if barrio in user_text.lower():
+                    for prop in propiedades_contexto:
+                        if (barrio in prop.get('neighborhood', '').lower() or 
+                            barrio in prop.get('title', '').lower()):
+                            propiedad_especifica = prop
+                            print(f"@ Detectada propiedad por barrio: {propiedad_especifica.get('title')}")
+                            break
+                    if propiedad_especifica:
+                        break
+        
+        # Si aún no se detectó, pedir clarificación
+        if not propiedad_especifica and propiedades_filtradas:
+            return generar_respuesta_clarificacion(propiedades_filtradas)
+
+    # --- BLOQUE 2: DETECCIÓN POR BARRIO (TU CÓDIGO ORIGINAL) ---
+    if not propiedad_especifica:
+        barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "soho", "almagro", "villa crespo", "san isidro", "vicente lopez"]
+        encontrado = False
+        for barrio in barrios:
+            if barrio in user_text.lower():
+                for prop in propiedades_contexto:
+                    if (barrio in prop.get('neighborhood', '').lower() or 
+                        barrio in prop.get('title', '').lower()):
+                        propiedad_especifica = prop
+                        print(f"@ Detectada propiedad por barrio: {propiedad_especifica.get('title')}")
+                        encontrado = True
+                        break
+                if encontrado:
+                    break
+
+    # --- BLOQUE 3: GENERAR RESPUESTA FINAL ---
+    if propiedad_especifica:
+        return generar_detalle_propiedad(propiedad_especifica)
+    else:
+        return generar_respuesta_general(propiedades_filtradas)
+    
+
+
+
 
 @asynccontextmanager
 async def lifespan(app):
