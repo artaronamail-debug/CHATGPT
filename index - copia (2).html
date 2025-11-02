@@ -547,7 +547,8 @@
     <script>
         const API_URL = "https://dante-propiedades-backend.onrender.com/chat";
         
-    
+        
+        const API_URL = "https://dante-propiedades-backend.onrender.com/chat";
 
 // 🔥 MODO DEMO - Datos de ejemplo para probar el frontend
 const datosDemo = {
@@ -929,35 +930,34 @@ const datosDemo = {
             showTypingIndicator();
 
             try {
-                // 🔥 MODO DEMO TEMPORAL - Reemplazar llamada al backend
-                console.log('🔍 Modo demo activo para:', msg);
+                const payload = {
+                    message: msg,
+                    channel: 'web',
+                    filters: filtrosSeleccionados
+                };
 
-                let data;
-                const mensajeLower = msg.toLowerCase().trim();
-
-                // Verificar si tenemos datos demo específicos para esta búsqueda
-                if (datosDemo[mensajeLower]) {
-                    console.log('🎭 Usando datos demo específicos');
-                    data = datosDemo[mensajeLower];
-                } else {
-                    // Búsqueda genérica demo
-                    console.log('🔍 Búsqueda genérica en modo demo');
-                    data = {
-                        response: `🔍 **Búsqueda: \"${msg}\"**\n\n` +
-                                `**💡 Modo demostración activo**\n` +
-                                `El backend está en mantenimiento. Búsquedas demo disponibles:\n\n` +
-                                `• "palermo" (2 propiedades)\n` +
-                                `• "monoambiente en recoleta" (1 alternativa)\n` +
-                                `• "terreno en venta" (1 terreno)\n\n` +
-                                `**📞 Sistema completo pronto**\n` +
-                                `Próximamente tendrás acceso a toda nuestra base de propiedades.`,
-                        search_performed: false,
-                        results_count: 0,
-                        propiedades: []
-                    };
+                // AGREGAR CONTEXTO SI ES SEGUIMIENTO
+                if (esSeguimiento && contextoActual.resultados.length > 0) {
+                    payload.contexto_anterior = contextoActual;
+                    payload.es_seguimiento = true;
+                    console.log('📤 Enviando contexto al backend:', contextoActual);
                 }
 
-                console.log('✅ Respuesta demo:', data);
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ Respuesta completa:', data);
 
                 // 🔥 MEJOR MANEJO DE RESPUESTAS CON CONTEXTO - ESTRATEGIA COMBINADA
                 function aplicarEstrategiaCombinada(data) {
@@ -996,86 +996,9 @@ const datosDemo = {
                                     `Contactanos para acceso a propiedades no publicadas.`
                         };
                     }
-                    
+
                     return data;
-                }
-
-                // Aplicar la estrategia combinada
-                const dataMejorada = aplicarEstrategiaCombinada(data);
-
-                // VARIABLE PARA EL MENSAJE FINAL
-                let mensajeFinal = '';
-
-                // MEJOR MANEJO DE RESPUESTAS CON CONTEXTO
-                if (dataMejorada.response) {
-                    let mensajeMejorado = dataMejorada.response;
-                    
-                    // AGREGAR INFORMACIÓN SOBRE RESULTADOS Y ACTUALIZAR CONTEXTO
-                    if (dataMejorada.search_performed && dataMejorada.results_count !== null) {
-                        if (dataMejorada.results_count > 0) {
-                            mensajeMejorado += `\n\n---\n**🎯 BÚSQUEDA EXITOSA**\n📊 **Encontré ${dataMejorada.results_count} propiedades** que coinciden con tu búsqueda.`;
-                            
-                            // ACTUALIZAR CONTEXTO con los nuevos resultados
-                            console.log('🔍 DEBUG - ANTES DE ACTUALIZAR CONTEXTO:', {
-                                data_propiedades: dataMejorada.propiedades,
-                                data_propiedades_length: dataMejorada.propiedades ? dataMejorada.propiedades.length : 0,
-                                data_completa: dataMejorada,
-                                filtrosSeleccionados: filtrosSeleccionados
-                            });
-                            
-                            // ACTUALIZAR CONTEXTO con los nuevos resultados
-                            if (dataMejorada.propiedades && dataMejorada.propiedades.length > 0) {
-                                console.log('✅ CONDICIÓN CUMPLIDA - Actualizando contexto');
-                                actualizarContexto(dataMejorada.propiedades, filtrosSeleccionados, 'busqueda');
-                            } else {
-                                console.log('❌ CONDICIÓN FALLADA - No hay propiedades para actualizar contexto');
-                                console.log('💡 Data recibida:', dataMejorada);
-                            }
-
-                            // AGREGAR INSTRUCCIÓN DE SEGUIMIENTO SOLO SI ES NUEVA BÚSQUEDA Y HAY RESULTADOS
-                            if (!esSeguimiento) {
-                                mensajeMejorado += `\n\n**💡 ¿Necesitás más información?** Podés preguntar:\n• "Más detalles sobre el primero"\n• "¿Tiene fotos el departamento en Palermo?"\n• "Contacto para la propiedad de $280,000"`;
-                                console.log('💡 Mensaje de seguimiento agregado');
-                            }
-                        } else {
-                            mensajeMejorado += `\n\n---\n**🔍 BÚSQUEDA REALIZADA**\n📭 No encontré propiedades con esos criterios. ¿Querés ajustar los filtros?`;
-                            // Limpiar contexto si no hay resultados
-                            actualizarContexto([], {}, 'busqueda');
-                        }
                     }
-                    
-                    // AGREGAR MENSAJE DE SEGUIMIENTO AL CONTEXTO (si existe esta función)
-                    if (typeof agregarMensajeSeguimiento !== 'undefined' && dataMejorada.search_performed && dataMejorada.results_count > 0) {
-                        agregarMensajeSeguimiento();
-                    }
-                    
-                    mensajeFinal = mensajeMejorado;
-                } else if (dataMejorada.error) {
-                    mensajeFinal = `⚠️ Error: ${dataMejorada.error}`;
-                } else {
-                    mensajeFinal = '❌ Respuesta inesperada del servidor';
-                }
-
-                // Si no se realizó búsqueda pero es seguimiento, mantener contexto
-                if (!dataMejorada.search_performed && esSeguimiento) {
-                    // Mantener el contexto anterior para seguir la conversación
-                    console.log('🔄 Manteniendo contexto para seguimiento');
-                }
-                
-                // MOSTRAR EL MENSAJE FINAL
-                addMessage(mensajeFinal);
-                statusText.textContent = 'Conectado';
-                
-            } catch (error) {
-                console.error('Error:', error);
-                addMessage('⚠️ No se pudo conectar con el servidor. Por favor, intentá nuevamente en unos momentos.');
-                statusText.textContent = 'Error de conexión';
-            } finally {
-                hideTypingIndicator();
-                button.disabled = false;
-                input.focus();
-            }
-        }
 
 // Aplicar la estrategia combinada
 const dataMejorada = aplicarEstrategiaCombinada(data);
@@ -1171,29 +1094,17 @@ input.focus();
 
 
 
-
-// Verificar estado del servidor - MODO DEMO MEJORADO
+// Verificar estado del servidor
 async function checkServerStatus() {
     try {
-        // Intentar conectar al backend real
-        const response = await fetch('https://dante-propiedades-backend.onrender.com/status');
+        const response = await fetch(API_URL.replace('/chat', '/status'));
         if (response.ok) {
-            const status = await response.json();
-            if (status.status === 'activo') {
-                statusText.textContent = 'Conectado';
-                statusText.style.color = '#10b981'; // Verde
-            } else {
-                statusText.textContent = 'Modo Demo';
-                statusText.style.color = '#f59e0b'; // Amarillo/naranja
-            }
+            statusText.textContent = 'Conectado';
         } else {
-            statusText.textContent = 'Modo Demo';
-            statusText.style.color = '#f59e0b';
+            statusText.textContent = 'Servidor inactivo';
         }
     } catch (error) {
-        statusText.textContent = 'Modo Demo';
-        statusText.style.color = '#f59e0b';
-        console.log('🔧 Usando modo demo - Backend no disponible');
+        statusText.textContent = 'Sin conexión';
     }
 }
 
