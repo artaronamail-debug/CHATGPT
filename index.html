@@ -587,14 +587,13 @@
             const mensajeLower = mensaje.toLowerCase().trim();
             
             const palabrasSeguimiento = [
-                'más', 'mas', 'detalles', 'brindar', 'brindame',
-                'características', 'caracteristicas', 'información', 'informacion',
-                'precio', 'ubicación', 'ubicacion', 'contacto', 'fotos', 'imágenes', 'imagenes',
-                'este', 'esta', 'ese', 'esa', 'este', 'esta',
-                'primero', 'primera', 'segundo', 'segunda', 'tercero', 'tercera',
-                'el primero', 'el segundo', 'la primera', 'la segunda',
-                'dime', 'cuéntame', 'cuentame', 'háblame', 'hablame', 'decime',
-                'me interesa', 'quiero saber', 'necesito saber'
+                'siguiente', 'anterior', 'ver', 'más',
+                'detalles', 'detalle', 'información', 'completa', 
+                'especificaciones', 'info', 'características', 
+                'ficha', 'técnica', 'propiedad', 'terreno', 
+                'departamento', 'casa', 'ph', 'oficina', 
+                'local', 'lote', 'terrenos', 'ampliar',
+                'especificame', 'específicame', 'mas'
             ];
             
             // Patrones más flexibles para seguimiento
@@ -609,21 +608,21 @@
                 /(más|mas)\s+(sobre|acerca|de)/i,
                 /(detalles|información|informacion)\s+(sobre|acerca|de)/i
             ];
-            
+
             // Verificar palabras clave
             const tienePalabraClave = palabrasSeguimiento.some(palabra => 
                 mensajeLower.includes(palabra)
             );
-            
+
             // Verificar patrones
             const tienePatron = patronesSeguimiento.some(patron => 
                 patron.test(mensajeLower)
             );
-            
+
             // También considerar mensajes muy cortos después de una búsqueda
             const esMensajeCorto = mensajeLower.split(' ').length <= 5;
-            
-            const esSeguimiento = tienePalabraClave || tienePatron || esMensajeCorto;
+
+            const esSeguimiento = false; // ← Esto está bien por ahora
             
             console.log('🔍 Análisis de seguimiento:', {
                 mensaje: mensajeLower,
