@@ -46,6 +46,14 @@ print(f"   GEMINI_API_KEYS: {os.getenv('GEMINI_API_KEYS', 'NO DEFINIDA')}")
 print("🔍 VARIABLE GEMINI_KEYS específica:")
 print(f"   GEMINI_KEYS: {os.getenv('GEMINI_KEYS', 'NO DEFINIDA')}")
 
+# === DIAGNÓSTICO ANTES DE LLAMAR A GEMINI ===
+print("🔍 Verificando disponibilidad de google.generativeai en /chat...")
+try:
+    import google.generativeai as genai
+    print("✅ google.generativeai disponible en contexto /chat")
+except ImportError as e:
+    print(f"❌ CRÍTICO: google.generativeai NO disponible en /chat: {e}")
+    return {"response": "Error del servidor - módulo no disponible"}
 
 
 def call_gemini_with_rotation(prompt: str) -> str:
