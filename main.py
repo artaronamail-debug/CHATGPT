@@ -1753,13 +1753,23 @@ async def chat(request: ChatRequest):
 
         # Si hay filtros, realizar búsqueda
         # 👇 EVITAR BÚSQUEDA SI HAY CONTEXTO DE SEGUIMIENTO
-        if filters and not property_details and not (es_seguimiento_final and contexto_anterior):
-            print("🎯 Activando búsqueda con filtros combinados...")
-            search_performed = True
-            metrics.increment_searches()
+        # 🔥 AGREGAR ESTO ANTES del primer uso de es_seguimiento_final
             
-            results = query_properties(filters)
-            print(f"📊 Resultados encontrados: {len(results)}")
+            print(f"🔍 DEBUG - es_seguimiento: {es_seguimiento}")
+            print(f"🔍 DEBUG - es_seguimiento_backend: {es_seguimiento_backend}")
+
+            # Solo entonces definir es_seguimiento_final
+            es_seguimiento_final = es_seguimiento or es_seguimiento_backend
+            print(f"🔍 DEBUG - es_seguimiento_final: {es_seguimiento_final}")
+            
+
+            if filters and not property_details and not (es_seguimiento_final and contexto_anterior):
+                print("🎯 Activando búsqueda con filtros combinados...")
+                search_performed = True
+                metrics.increment_searches()
+            
+                results = query_properties(filters)
+                print(f"📊 Resultados encontrados: {len(results)}")
         else:
             print("🔄 Modo seguimiento - usando contexto anterior")
             # Usar el contexto anterior si está disponible
