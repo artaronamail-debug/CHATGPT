@@ -647,6 +647,10 @@ const datosDemo = {
         ]
     }
 };
+
+
+
+
         
    // 🔥 FUNCIÓN TEMPORAL - Arreglar error aplicarFiltros
 function aplicarFiltros() {
@@ -655,7 +659,20 @@ function aplicarFiltros() {
 }     
         
         
-        
+// 🔥 MEJOR MANEJO DE RESPUESTAS CON CONTEXTO - ESTRATEGIA COMBINADA
+function aplicarEstrategiaCombinada(data) {
+    if (!data.propiedades || data.propiedades.length === 0) {
+        return {
+                ...data,
+                response: `🔍 **No encontré propiedades con esos criterios exactos**\n\n` +
+                `**💡 Te sugiero:**\n` +
+                `• Probar con otros barrios o características\n` +
+                `• Ajustar el presupuesto o cantidad de ambientes\n` +
+                `• Explorar diferentes tipos de propiedad\n\n` +
+                `**📞 Búsqueda personalizada**\n` +
+                `Contame exactamente qué buscás y te ayudo a encontrar las mejores opciones disponibles.`
+              };
+}        
         
         
         
@@ -1001,20 +1018,7 @@ function aplicarFiltros() {
 
                 console.log('✅ Respuesta demo:', data);
 
-                // 🔥 MEJOR MANEJO DE RESPUESTAS CON CONTEXTO - ESTRATEGIA COMBINADA
-                function aplicarEstrategiaCombinada(data) {
-                    if (!data.propiedades || data.propiedades.length === 0) {
-                        return {
-                            ...data,
-                            response: `🔍 **No encontré propiedades con esos criterios exactos**\n\n` +
-                                    `**💡 Te sugiero:**\n` +
-                                    `• Probar con otros barrios o características\n` +
-                                    `• Ajustar el presupuesto o cantidad de ambientes\n` +
-                                    `• Explorar diferentes tipos de propiedad\n\n` +
-                                    `**📞 Búsqueda personalizada**\n` +
-                                    `Contame exactamente qué buscás y te ayudo a encontrar las mejores opciones disponibles.`
-                        };
-                    }
+                
                     
                     const mensajeOriginal = data.response;
                     
