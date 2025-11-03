@@ -1366,21 +1366,14 @@ def detectar_ambientes_especificos_seguimiento(text_lower: str) -> Dict[str, Any
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    print(">>> EJECUTANDO VERSIÓN CORREGIDA...")
     """Endpoint principal para chat con el asistente inmobiliario"""
     start_time = time.time()
     metrics.increment_requests()
     
     try:
         user_text = request.message.strip()
-        text_lower = user_text.lower()
         channel = request.channel.strip()
         filters_from_frontend = request.filters if request.filters else {}
-
-        # Inicializar variables principales
-        filters, results = {}, None
-        search_performed = False
-        property_details = None
 
         # 👇 AGREGAR DETECCIÓN DE CONTEXTO
         contexto_anterior = request.contexto_anterior if hasattr(request, 'contexto_anterior') else None
@@ -1426,6 +1419,11 @@ async def chat(request: ChatRequest):
                         f"Tipos de propiedad: {', '.join(tipos_disponibles)}.\n"
                         f"Operaciones disponibles: {', '.join(operaciones_disponibles)}."
                     )
+
+                    text_lower = user_text.lower()
+                    filters, results = {}, None
+                    search_performed = False
+                    property_details = None
 
                     # 👇 AGREGAR DETECCIÓN MEJORADA DE SEGUIMIENTO
                     palabras_seguimiento_backend = [
@@ -1546,8 +1544,8 @@ async def chat(request: ChatRequest):
                             for prop in propiedades_contexto:
                                 if (barrio in prop.get('neighborhood', '').lower() or 
                                     barrio in prop.get('title', '').lower()):
-                                    propiedad_especifica = prop
-                                    print(f"@ Detectada propiedad por barrio: {propiedad_especifica.get('title')} - {propiedad_especifica}")
+                                    propiedad_específica = prop
+                                    print(f"@ Detectada propiedad por barrio: {propiedad_específica.get('title')} - {propiedad_específica}")
                                     encontrado = True
                                     break
                             if encontrado:
