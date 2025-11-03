@@ -1383,16 +1383,16 @@ async def chat(request: ChatRequest):
             raise HTTPException(status_code=400, detail="El mensaje no puede estar vacío")
 
             # 🔥🔥🔥 AGREGAR ESTOS PRINTS DEBUG NUEVOS AQUÍ 🔥🔥🔥
-            print(f"🔍 DEBUG - user_text: '{user_text}'")
-            print(f"🔍 DEBUG - es_seguimiento: {es_seguimiento}")
-            print(f"🔍 DEBUG - contexto_anterior existe: {contexto_anterior is not None}")
-            if contexto_anterior:
-                print(f"🔍 DEBUG - resultados en contexto: {len(contexto_anterior.get('resultados', []))}")
-                if contexto_anterior.get('resultados'):
-                    primera_prop = contexto_anterior['resultados'][0]
-                    print(f"🔍 DEBUG - primera propiedad en contexto: {primera_prop.get('title')} - {primera_prop.get('rooms')} amb")
-            else:
-                print(f"🔍 DEBUG - NO hay contexto_anterior")
+        print(f"🔍 DEBUG - user_text: '{user_text}'")
+        print(f"🔍 DEBUG - es_seguimiento: {es_seguimiento}")
+        print(f"🔍 DEBUG - contexto_anterior existe: {contexto_anterior is not None}")
+        if contexto_anterior:
+            print(f"🔍 DEBUG - resultados en contexto: {len(contexto_anterior.get('resultados', []))}")
+            if contexto_anterior.get('resultados'):
+                primera_prop = contexto_anterior['resultados'][0]
+                print(f"🔍 DEBUG - primera propiedad en contexto: {primera_prop.get('title')} - {primera_prop.get('rooms')} amb")
+        else:
+            print(f"🔍 DEBUG - NO hay contexto_anterior")
 
             # 👇 TUS PRINTS ACTUALES SE MANTIENEN
             print(f"📥 Mensaje recibido: {user_text}")
