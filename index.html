@@ -619,7 +619,7 @@ function aplicarEstrategiaCombinada(data) {
  // ← ¡IMPORTANTE: ESTA LLAVE CIERRA LA FUNCIÓN!
     // Construir mensaje natural para el chat
     const descripcionFiltros = formatearFiltrosParaMensaje(filtros);
-    let mensajeNatural = `Buscar propiedades para ${filtros.operacion || 'alquiler o venta'}`;
+    
     
     if (filtros.neighborhood) {
         mensajeNatural += ` en ${filtros.neighborhood}`;
