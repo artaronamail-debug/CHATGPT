@@ -1029,10 +1029,11 @@ function aplicarEstrategiaCombinada(data) {
                     es_seguimiento: esSeguimiento
                 }
             });
+            
             addMessage(msg, 'user');
             input.value = '';
             button.disabled = true;
-            
+
             showTypingIndicator();
 
             try {
@@ -1066,110 +1067,47 @@ function aplicarEstrategiaCombinada(data) {
 
                 console.log('✅ Respuesta demo:', data);
 
-                
-                    
-                    const mensajeOriginal = data.response;
-                    
-                    // Detectar cuando la IA está "justificando" propiedades no exactas
-                    const indicadoresNoExacto = ['aunque', 'podría ser', 'sin embargo', 'alternativa', 'excelente opción si'];
-                    const esCoincidenciaNoExacta = indicadoresNoExacto.some(indicator => 
-                        mensajeOriginal.toLowerCase().includes(indicator)
-                    );
-                    
-                    if (esCoincidenciaNoExacta) {
-                        return {
-                            ...data,
-                            response: `🔍 **Búsqueda en nuestra base**\n\n` +
-                                    `No encontré coincidencias exactas, pero te muestro alternativas disponibles:\n\n` +
-                                    `${mensajeOriginal}\n\n` +
-                                    `💡 **¿Por qué considerar estas opciones?**\n` +
-                                    `• Ubicación privilegiada y valorización segura\n` +
-                                    `• Espacio adaptable a tus necesidades\n` +
-                                    `• Buen potencial de inversión o alquiler\n\n` +
-                                    `📞 **¿Querés que busquemos algo más específico?**\n` +
-                                    `Contactanos para acceso a propiedades no publicadas.`
-                        };
-                    }
-                    
-                    return data;
-                }
-
                 // Aplicar la estrategia combinada
                 const dataMejorada = aplicarEstrategiaCombinada(data);
-
-                // VARIABLE PARA EL MENSAJE FINAL
                 let mensajeFinal = '';
 
-                // MEJOR MANEJO DE RESPUESTAS CON CONTEXTO
                 if (dataMejorada.response) {
                     let mensajeMejorado = dataMejorada.response;
                     
-                    // AGREGAR INFORMACIÓN SOBRE RESULTADOS Y ACTUALIZAR CONTEXTO
                     if (dataMejorada.search_performed && dataMejorada.results_count !== null) {
                         if (dataMejorada.results_count > 0) {
                             mensajeMejorado += `\n\n---\n**🎯 BÚSQUEDA EXITOSA**\n📊 **Encontré ${dataMejorada.results_count} propiedades** que coinciden con tu búsqueda.`;
                             
-                            // ACTUALIZAR CONTEXTO con los nuevos resultados
-                            console.log('🔍 DEBUG - ANTES DE ACTUALIZAR CONTEXTO:', {
-                                data_propiedades: dataMejorada.propiedades,
-                                data_propiedades_length: dataMejorada.propiedades ? dataMejorada.propiedades.length : 0,
-                                data_completa: dataMejorada,
-                                filtrosSeleccionados: filtrosSeleccionados
-                            });
-                            
-                            // ACTUALIZAR CONTEXTO con los nuevos resultados
                             if (dataMejorada.propiedades && dataMejorada.propiedades.length > 0) {
-                                console.log('✅ CONDICIÓN CUMPLIDA - Actualizando contexto');
                                 actualizarContexto(dataMejorada.propiedades, filtrosSeleccionados, 'busqueda');
-                            } else {
-                                console.log('❌ CONDICIÓN FALLADA - No hay propiedades para actualizar contexto');
-                                console.log('💡 Data recibida:', dataMejorada);
                             }
 
-                            // AGREGAR INSTRUCCIÓN DE SEGUIMIENTO SOLO SI ES NUEVA BÚSQUEDA Y HAY RESULTADOS
                             if (!esSeguimiento) {
-                                mensajeMejorado += `\n\n**💡 ¿Necesitás más información?** Podés preguntar:\n• "Más detalles sobre el primero"\n• "¿Tiene fotos el departamento en Palermo?"\n• "Contacto para la propiedad de $280,000"`;
-                                console.log('💡 Mensaje de seguimiento agregado');
+                                mensajeMejorado += `\n\n**💡 ¿Necesitás más información?** Podés preguntar:\n• "Más detalles sobre el primero"\n• "Ver fotos"\n• "Contacto para esta propiedad"`;
                             }
                         } else {
-                            mensajeMejorado += `\n\n---\n**🔍 BÚSQUEDA REALIZADA**\n📭 No encontré propiedades con esos criterios. ¿Querés ajustar los filtros?`;
-                            // Limpiar contexto si no hay resultados
+                            mensajeMejorado += `\n\n---\n**🔍 BÚSQUEDA REALIZADA**\n📭 No encontré propiedades con esos criterios.`;
                             actualizarContexto([], {}, 'busqueda');
                         }
                     }
                     
-                    // AGREGAR MENSAJE DE SEGUIMIENTO AL CONTEXTO (si existe esta función)
-                    if (typeof agregarMensajeSeguimiento !== 'undefined' && dataMejorada.search_performed && dataMejorada.results_count > 0) {
-                        agregarMensajeSeguimiento();
-                    }
-                    
                     mensajeFinal = mensajeMejorado;
-                } else if (dataMejorada.error) {
-                    mensajeFinal = `⚠️ Error: ${dataMejorada.error}`;
                 } else {
                     mensajeFinal = '❌ Respuesta inesperada del servidor';
                 }
 
-                // Si no se realizó búsqueda pero es seguimiento, mantener contexto
-                if (!dataMejorada.search_performed && esSeguimiento) {
-                    // Mantener el contexto anterior para seguir la conversación
-                    console.log('🔄 Manteniendo contexto para seguimiento');
-                }
-                
-                // MOSTRAR EL MENSAJE FINAL
                 addMessage(mensajeFinal);
                 statusText.textContent = 'Conectado';
                 
             } catch (error) {
                 console.error('Error:', error);
-                addMessage('⚠️ No se pudo conectar con el servidor. Por favor, intentá nuevamente en unos momentos.');
-                statusText.textContent = 'Error de conexión';
+                addMessage('⚠️ Error procesando la solicitud. Por favor, intentá nuevamente.');
+                statusText.textContent = 'Error';
             } finally {
                 hideTypingIndicator();
                 button.disabled = false;
                 input.focus();
-            }
-        }
+}
 
 // Aplicar la estrategia combinada
 const dataMejorada = aplicarEstrategiaCombinada(data);
