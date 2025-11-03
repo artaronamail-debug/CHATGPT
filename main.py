@@ -1366,6 +1366,7 @@ def detectar_ambientes_especificos_seguimiento(text_lower: str) -> Dict[str, Any
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
+    print(">>> EJECUTANDO VERSIÓN CORREGIDA...")
     """Endpoint principal para chat con el asistente inmobiliario"""
     start_time = time.time()
     metrics.increment_requests()
