@@ -561,6 +561,31 @@ function aplicarFiltros() {
     }
 
     // Construir mensaje natural para el chat
+    let mensajeNatural = 'Buscar propiedades';
+    
+    if (filtros.operacion) mensajeNatural += ` para ${filtros.operacion}`;
+    if (filtros.neighborhood) mensajeNatural += ` en ${filtros.neighborhood}`;
+    if (filtros.tipo) mensajeNatural += `, tipo ${filtros.tipo}`;
+    if (filtros.min_rooms) mensajeNatural += `, mínimo ${filtros.min_rooms} ambientes`;
+    if (filtros.min_price || filtros.max_price) {
+        mensajeNatural += `, precio`;
+        if (filtros.min_price) mensajeNatural += ` desde $${filtros.min_price}`;
+        if (filtros.max_price) mensajeNatural += ` hasta $${filtros.max_price}`;
+    }
+    
+    // Poner el mensaje en el input
+    const input = document.getElementById('userInput');
+    input.value = mensajeNatural;
+    
+    // Enviar automáticamente después de un breve delay
+    setTimeout(() => {
+        const sendBtn = document.getElementById('sendBtn');
+        if (sendBtn && !sendBtn.disabled) {
+            send();
+        }
+    }, 500);
+} // ← ¡IMPORTANTE: ESTA LLAVE CIERRA LA FUNCIÓN!
+    // Construir mensaje natural para el chat
     const descripcionFiltros = formatearFiltrosParaMensaje(filtros);
     let mensajeNatural = `Buscar propiedades para ${filtros.operacion || 'alquiler o venta'}`;
     
@@ -946,41 +971,6 @@ function aplicarEstrategiaCombinada(data) {
             }
 
             return consulta;
-        }
-
-        function aplicarFiltros() {
-                const filtros = obtenerFiltrosSeleccionados();
-                
-                if (Object.keys(filtros).length === 0) {
-                    alert('Seleccioná al menos un filtro para buscar.');
-                    return;
-                }
-
-                // Construir mensaje MÁS NATURAL para el backend
-                const descripcionFiltros = formatearFiltrosParaMensaje(filtros);
-                
-                // Mensaje más natural que Gemini entenderá mejor
-                let mensajeNatural = `Buscar propiedades para ${filtros.operacion || 'alquiler o venta'}`;
-                
-                if (filtros.neighborhood) {
-                    mensajeNatural += ` en ${filtros.neighborhood}`;
-                }
-                if (filtros.tipo) {
-                    mensajeNatural += `, tipo ${filtros.tipo}`;
-                }
-                if (filtros.min_rooms) {
-                    mensajeNatural += `, mínimo ${filtros.min_rooms} ambientes`;
-                }
-                if (filtros.min_price || filtros.max_price) {
-                    mensajeNatural += `, precio`;
-                    if (filtros.min_price) mensajeNatural += ` desde $${filtros.min_price}`;
-                    if (filtros.max_price) mensajeNatural += ` hasta $${filtros.max_price}`;
-                }
-                
-                input.value = mensajeNatural;
-                
-                // Enviar automáticamente
-                send();
         }
 
 
