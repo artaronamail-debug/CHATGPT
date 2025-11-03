@@ -425,7 +425,6 @@
         <div class="filters-panel">
             <div class="filters-header">
                 <div class="logo-container">
-        
                     <h1>Dante Propiedades</h1>
                 </div>
                 <div class="filters-title">Filtros de Búsqueda</div>
@@ -495,8 +494,8 @@
             </div>
 
             <div class="filter-buttons">
-                <button class="btn btn-primary" onclick="aplicarFiltros()">🔍 Aplicar Filtros</button>
-                <button class="btn btn-secondary" onclick="limpiarFiltros()">🔄 Limpiar Filtros</button>
+                <button id="aplicarFiltrosBtn" class="btn btn-primary">🔍 Aplicar Filtros</button>
+                <button id="limpiarFiltrosBtn" class="btn btn-secondary">🔄 Limpiar Filtros</button>
             </div>
         </div>
 
@@ -509,17 +508,11 @@
                     <div class="status-dot"></div>
                     <span id="statusText">Conectado</span>
                 </div>
-                <button class="reset-chat" onclick="resetearChat()">🔄 Nueva Consulta</button>
+                <button id="resetearChatBtn" class="reset-chat">🔄 Nueva Consulta</button>
             </div>
 
             <div class="chat-box" id="chatBox">
-                <!-- Mensaje de bienvenida -->
-                <div class="message msg-bot">
-                    <b>ASISTENTE VIRTUAL</b>
-                    ¡Hola! 👋 Soy tu asistente de Dante Propiedades. 
-                    Usá los filtros a la izquierda para buscar propiedades específicas 
-                    o contame directamente qué estás buscando.
-                </div>
+                <!-- Los mensajes se agregarán aquí dinámicamente -->
             </div>
 
             <!-- Indicador de typing -->
@@ -545,361 +538,230 @@
     </div>
 
     <script>
-        // --------------------------------------------------------------------
-        // CONFIGURACIÓN Y VARIABLES GLOBALES
-        // --------------------------------------------------------------------
-        const API_URL = "https://dante-propiedades-backend.onrender.com/chat";
+        document.addEventListener('DOMContentLoaded', () => {
+            // --------------------------------------------------------------------
+            // CONFIGURACIÓN Y VARIABLES GLOBALES
+            // --------------------------------------------------------------------
+            const API_URL = "https://dante-propiedades-backend.onrender.com/chat";
 
-        // Elementos del DOM
-        const chatBox = document.getElementById('chatBox');
-        const input = document.getElementById('userInput');
-        const button = document.getElementById('sendBtn');
-        const typingIndicator = document.getElementById('typingIndicator');
-        const statusText = document.getElementById('statusText');
+            // Elementos del DOM
+            const chatBox = document.getElementById('chatBox');
+            const userInput = document.getElementById('userInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const typingIndicator = document.getElementById('typingIndicator');
+            const statusText = document.getElementById('statusText');
+            const aplicarFiltrosBtn = document.getElementById('aplicarFiltrosBtn');
+            const limpiarFiltrosBtn = document.getElementById('limpiarFiltrosBtn');
+            const resetearChatBtn = document.getElementById('resetearChatBtn');
 
-        // Estado de la conversación
-        let conversacionActual = [];
-        let contextoActual = {
-            tipo: null,           // 'busqueda' | 'propiedad_especifica'
-            resultados: [],       // Array de propiedades mostradas
-            propiedad_focus: null, // Propiedad específica en foco
-            filtros_usados: {},   // Filtros aplicados en la última búsqueda
-            timestamp: null
-        };
+            // Estado de la conversación
+            let conversacionActual = [];
+            let contextoActual = {
+                tipo: null,
+                resultados: [],
+                propiedad_focus: null,
+                filtros_usados: {},
+                timestamp: null
+            };
 
-        // 🔥 MODO DEMO - Datos de ejemplo para probar el frontend
-        const datosDemo = {
-            "palermo": {
-                response: "¡Hola! Encontré estas propiedades en Palermo:\n\n🏠 **Departamento en Palermo**\n• 2 ambientes | 45m² | $280,000\n• Con balcón y amenities\n\n🏠 **PH en Palermo**\n• 3 ambientes | 60m² | $350,000\n• Con patio y lavadero\n\n¿Te interesa alguna de estas opciones?",
-                search_performed: true,
-                results_count: 2,
-                propiedades: [
-                    { id: "demo_1", title: "Departamento en Palermo", neighborhood: "Palermo", price: 280000, rooms: 2, surface: "45.0 m2", description: "Moderno departamento con balcón" },
-                    { id: "demo_2", title: "PH en Palermo", neighborhood: "Palermo", price: 350000, rooms: 3, surface: "60.0 m2", description: "PH amplio con patio" }
-                ]
-            },
-            "monoambiente en recoleta": {
-                response: "🔍 **No encontré monoambientes en Recoleta**\n\n**🏠 Te recomiendo esta alternativa disponible:**\n\n🏠 **Departamento en Recoleta**\n• 3 ambientes | 95m² | $420,000\n• Ubicación premium\n\n**💡 ¿Por qué considerar esta opción?**\n• Excelente ubicación y valorización\n• Espacio adaptable para home office\n• Potencial de alquiler de habitaciones\n\n**🔄 También podés probar:**\n• \"Monoambientes en Palermo\"\n• \"Departamentos en Belgrano\"",
-                search_performed: true,
-                results_count: 1,
-                propiedades: [
-                    { id: "demo_3", title: "Departamento en Recoleta", neighborhood: "Recoleta", price: 420000, rooms: 3, surface: "95.0 m2", description: "Departamento amplio en zona premium" }
-                ]
-            },
-            "terreno en venta": {
-                response: "¡Hola! Encontré este terreno disponible:\n\n🏞️ **Terreno en Boedo - Para desarrollo**\n• 306m² | $600,000\n• Zonificación residencial\n• Ideal para proyecto inmobiliario\n\n**📈 Potencial de inversión:**\n• Ubicación en crecimiento\n• Posibilidad de construir 2 plantas\n• Excelente relación precio/metro\n\n¿Te interesa conocer más detalles?",
-                search_performed: true,
-                results_count: 1,
-                propiedades: [
-                    { id: "demo_4", title: "Terreno en Boedo, para desarrollo", neighborhood: "Boedo", price: 600000, rooms: 0, surface: "306.0 m2", description: "Terreno ideal para desarrollo inmobiliario" }
-                ]
-            }
-        };
+            // 🔥 MODO DEMO - Datos de ejemplo
+            const datosDemo = {
+                "palermo": {
+                    response: "¡Hola! Encontré estas propiedades en Palermo:\n\n🏠 **Departamento en Palermo**\n• 2 ambientes | 45m² | $280,000\n• Con balcón y amenities\n\n🏠 **PH en Palermo**\n• 3 ambientes | 60m² | $350,000\n• Con patio y lavadero",
+                    search_performed: true,
+                    results_count: 2,
+                    propiedades: [
+                        { id: "demo_1", title: "Departamento en Palermo", neighborhood: "Palermo", price: 280000, rooms: 2, surface: "45.0 m2" },
+                        { id: "demo_2", title: "PH en Palermo", neighborhood: "Palermo", price: 350000, rooms: 3, surface: "60.0 m2" }
+                    ]
+                },
+                "monoambiente en recoleta": {
+                    response: "🔍 **No encontré monoambientes en Recoleta.**\n\n**🏠 Te recomiendo esta alternativa:**\n\n🏠 **Departamento en Recoleta**\n• 3 ambientes | 95m² | $420,000\n• Ubicación premium.",
+                    search_performed: true,
+                    results_count: 1,
+                    propiedades: [
+                        { id: "demo_3", title: "Departamento en Recoleta", neighborhood: "Recoleta", price: 420000, rooms: 3, surface: "95.0 m2" }
+                    ]
+                }
+            };
 
-        // --------------------------------------------------------------------
-        // FUNCIONES PRINCIPALES DEL CHAT
-        // --------------------------------------------------------------------
+            // --------------------------------------------------------------------
+            // FUNCIONES PRINCIPALES DEL CHAT
+            // --------------------------------------------------------------------
 
-        /**
-         * Añade un mensaje a la caja de chat y lo guarda en el historial.
-         * @param {string} text - El contenido del mensaje.
-         * @param {string} from - Quién envía el mensaje ('user' o 'bot').
-         */
-        function addMessage(text, from = "bot") {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${from === 'user' ? 'msg-user' : 'msg-bot'}`;
-            
-            // Formatea el mensaje del bot para incluir el prefijo y procesar Markdown simple.
-            if (from === 'bot') {
-                messageDiv.innerHTML = `<b>ASISTENTE VIRTUAL</b>${text.replace(/\n/g, '<br>')}`;
-            } else {
-                messageDiv.textContent = text;
-            }
-            
-            chatBox.appendChild(messageDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-            
-            conversacionActual.push({ text, from, timestamp: new Date().toISOString() });
-        }
-
-        /**
-         * Muestra el indicador de "escribiendo...".
-         */
-        function showTypingIndicator() {
-            typingIndicator.style.display = 'flex';
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        /**
-         * Oculta el indicador de "escribiendo...".
-         */
-        function hideTypingIndicator() {
-            typingIndicator.style.display = 'none';
-        }
-
-        /**
-         * Envía la consulta del usuario al backend (o al modo demo).
-         */
-        async function send() {
-            let msg = input.value.trim();
-            const filtrosSeleccionados = obtenerFiltrosSeleccionados();
-            
-            if (!msg && Object.keys(filtrosSeleccionados).length > 0) {
-                msg = construirConsultaConFiltros();
-            }
-            
-            if (!msg) {
-                alert('Por favor, escribí tu consulta o seleccioná algún filtro.');
-                return;
-            }
-
-            const esSeguimiento = esPreguntaSeguimiento(msg);
-            
-            addMessage(msg, 'user');
-            input.value = '';
-            button.disabled = true;
-            showTypingIndicator();
-
-            try {
-                console.log('🔍 Modo demo activo para:', msg);
-                let data;
-                const mensajeLower = msg.toLowerCase().trim();
-
-                if (datosDemo[mensajeLower]) {
-                    data = datosDemo[mensajeLower];
+            function addMessage(text, from = "bot") {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${from === 'user' ? 'msg-user' : 'msg-bot'}`;
+                if (from === 'bot') {
+                    messageDiv.innerHTML = `<b>ASISTENTE VIRTUAL</b><br>${text.replace(/\n/g, '<br>')}`;
                 } else {
-                    data = {
-                        response: `🔍 **Búsqueda: \"${msg}\"**\n\n**💡 Modo demostración activo**\nEl backend está en mantenimiento. Búsquedas demo disponibles:\n\n• "palermo"\n• "monoambiente en recoleta"\n• "terreno en venta"`,
+                    messageDiv.textContent = text;
+                }
+                chatBox.appendChild(messageDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                conversacionActual.push({ text, from, timestamp: new Date().toISOString() });
+            }
+
+            function showTypingIndicator() {
+                typingIndicator.style.display = 'flex';
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            function hideTypingIndicator() {
+                typingIndicator.style.display = 'none';
+            }
+
+            async function send() {
+                let msg = userInput.value.trim();
+                const filtros = obtenerFiltrosSeleccionados();
+                if (!msg && Object.keys(filtros).length > 0) {
+                    msg = construirConsultaConFiltros();
+                }
+                if (!msg) return;
+
+                addMessage(msg, 'user');
+                userInput.value = '';
+                sendBtn.disabled = true;
+                showTypingIndicator();
+
+                try {
+                    const esSeguimiento = esPreguntaSeguimiento(msg);
+                    const payload = {
+                        message: msg,
+                        channel: 'web',
+                        filters: filtros,
+                        contexto_anterior: contextoActual,
+                        es_seguimiento: esSeguimiento
+                    };
+                    
+                    // Lógica de modo DEMO
+                    const data = datosDemo[msg.toLowerCase().trim()] || {
+                        response: `🔍 **Búsqueda: \"${msg}\"**\n\n**💡 Modo demostración activo.**\nNo encontré datos para esa consulta. Prueba con "palermo" o "monoambiente en recoleta".`,
                         search_performed: false,
                         results_count: 0,
                         propiedades: []
                     };
-                }
 
-                const dataMejorada = aplicarEstrategiaCombinada(data);
-                let mensajeFinal = procesarRespuesta(dataMejorada, esSeguimiento, filtrosSeleccionados);
-                addMessage(mensajeFinal, 'bot');
-                statusText.textContent = 'Conectado';
-
-            } catch (error) {
-                console.error('Error:', error);
-                addMessage('⚠️ Error procesando la solicitud. Por favor, intentá nuevamente.', 'bot');
-                statusText.textContent = 'Error';
-            } finally {
-                hideTypingIndicator();
-                button.disabled = false;
-                input.focus();
-            }
-        }
-
-        /**
-         * Procesa la respuesta del backend/demo para construir el mensaje final.
-         * @param {object} data - La respuesta del servidor.
-         * @param {boolean} esSeguimiento - Si la consulta es un seguimiento.
-         * @param {object} filtros - Los filtros aplicados.
-         * @returns {string} El mensaje final para mostrar al usuario.
-         */
-        function procesarRespuesta(data, esSeguimiento, filtros) {
-            if (!data.response) return '❌ Respuesta inesperada del servidor';
-
-            let mensaje = data.response;
-
-            if (data.search_performed && data.results_count !== null) {
-                if (data.results_count > 0) {
-                    mensaje += `\n\n---\n**🎯 BÚSQUEDA EXITOSA**\n📊 **Encontré ${data.results_count} propiedades**.`;
-                    if (data.propiedades && data.propiedades.length > 0) {
-                        actualizarContexto(data.propiedades, filtros, 'busqueda');
-                    }
-                    if (!esSeguimiento) {
-                        mensaje += `\n\n**💡 ¿Necesitás más información?** Podés preguntar:\n• "Más detalles sobre el primero"\n• "Ver fotos"`;
-                    }
-                } else {
-                    mensaje += `\n\n---\n**🔍 BÚSQUEDA REALIZADA**\n📭 No encontré propiedades con esos criterios.`;
-                    actualizarContexto([], {}, 'busqueda');
-                }
-            }
-            return mensaje;
-        }
-
-        // --------------------------------------------------------------------
-        // FUNCIONES DE FILTROS Y CONTEXTO
-        // --------------------------------------------------------------------
-
-        /**
-         * Recoge los valores de los filtros del DOM.
-         * @returns {object} Un objeto con los filtros seleccionados.
-         */
-        function obtenerFiltrosSeleccionados() {
-            const filtros = {};
-            const campos = ['operacion', 'barrio', 'tipo', 'ambientes', 'precioMin', 'precioMax', 'metrosMin', 'metrosMax'];
-            const mapeo = {
-                'barrio': 'neighborhood', 'ambientes': 'min_rooms', 'precioMin': 'min_price',
-                'precioMax': 'max_price', 'metrosMin': 'min_sqm', 'metrosMax': 'max_sqm'
-            };
-
-            campos.forEach(id => {
-                const valor = document.getElementById(id).value;
-                if (valor) {
-                    const clave = mapeo[id] || id;
-                    filtros[clave] = isNaN(parseFloat(valor)) ? valor : parseFloat(valor);
-                }
-            });
-            return filtros;
-        }
-        
-        /**
-         * Construye un string legible a partir de los filtros para usar en una consulta.
-         * @param {object} filtros - El objeto de filtros.
-         * @returns {string} Una descripción de los filtros.
-         */
-        function formatearFiltrosParaMensaje(filtros) {
-            const partes = [];
-            if (filtros.operacion) partes.push(`${filtros.operacion}`);
-            if (filtros.neighborhood) partes.push(`en ${filtros.neighborhood}`);
-            if (filtros.tipo) partes.push(`tipo ${filtros.tipo}`);
-            if (filtros.min_rooms) partes.push(`de ${filtros.min_rooms} ambientes`);
-            if (filtros.min_price || filtros.max_price) {
-                let p = 'precio';
-                if (filtros.min_price) p += ` desde $${filtros.min_price}`;
-                if (filtros.max_price) p += ` hasta $${filtros.max_price}`;
-                partes.push(p);
-            }
-            return partes.join(', ');
-        }
-
-        /**
-         * Crea una consulta en lenguaje natural a partir de los filtros.
-         * @param {string} [mensajeAdicional=''] - Texto adicional para la consulta.
-         * @returns {string} La consulta completa.
-         */
-        function construirConsultaConFiltros(mensajeAdicional = '') {
-            const descripcion = formatearFiltrosParaMensaje(obtenerFiltrosSeleccionados());
-            let consulta = `Buscar propiedades ${descripcion ? 'con ' + descripcion : ''}`;
-            if (mensajeAdicional) consulta += `. ${mensajeAdicional}`;
-            return consulta;
-        }
-
-        /**
-         * Limpia todos los campos de los filtros.
-         */
-        function limpiarFiltros() {
-            const ids = ['operacion', 'barrio', 'tipo', 'ambientes', 'precioMin', 'precioMax', 'metrosMin', 'metrosMax'];
-            ids.forEach(id => document.getElementById(id).value = '');
-        }
-
-        /**
-         * Toma los filtros, construye un mensaje y lo envía automáticamente.
-         */
-        function aplicarFiltros() {
-            console.log('🔍 Aplicando filtros...');
-            const consulta = construirConsultaConFiltros();
-            input.value = consulta;
-            send();
-        }
-
-        /**
-         * Reinicia el chat, el contexto y los filtros.
-         */
-        function resetearChat() {
-            if (confirm('¿Estás seguro de que querés empezar una nueva conversación?')) {
-                chatBox.innerHTML = '';
-                conversacionActual = [];
-                actualizarContexto([], {}, null);
-                limpiarFiltros();
-                setTimeout(() => addMessage('¡Perfecto! Empecemos de nuevo. ¿Qué propiedad estás buscando?', 'bot'), 300);
-            }
-        }
-
-        /**
-         * Actualiza el objeto de contexto global.
-         * @param {Array} resultados - Las propiedades encontradas.
-         * @param {object} [filtros={}] - Los filtros usados.
-         * @param {string} [tipo='busqueda'] - El tipo de contexto.
-         */
-        function actualizarContexto(resultados, filtros = {}, tipo = 'busqueda') {
-            contextoActual = {
-                tipo: tipo,
-                resultados: resultados || [],
-                propiedad_focus: resultados && resultados.length === 1 ? resultados[0] : null,
-                filtros_usados: filtros,
-                timestamp: new Date().toISOString()
-            };
-            console.log('🔍 Contexto actualizado:', contextoActual);
-        }
-
-        /**
-         * Analiza si un mensaje es una pregunta de seguimiento basada en el contexto.
-         * @param {string} mensaje - El mensaje del usuario.
-         * @returns {boolean} - True si es una pregunta de seguimiento.
-         */
-        function esPreguntaSeguimiento(mensaje) {
-            if (!contextoActual.resultados || contextoActual.resultados.length === 0) return false;
-            
-            const msg = mensaje.toLowerCase().trim();
-            const palabrasClave = ['siguiente', 'anterior', 'ver', 'más', 'mas', 'detalles', 'información', 'info', 'fotos', 'contacto'];
-            const patrones = [/(el|la)\s+(primero|segundo|tercero)/, /(este|esa)\s+(propiedad|casa|depto)/];
-
-            const esSeguimiento = palabrasClave.some(p => msg.includes(p)) || patrones.some(p => p.test(msg));
-            console.log(`🔍 Análisis de seguimiento para \"${msg}\": ${esSeguimiento}`);
-            return esSeguimiento;
-        }
-
-        /**
-         * Mejora la respuesta del bot para alternativas, añadiendo justificaciones.
-         * @param {object} data - La respuesta original del servidor.
-         * @returns {object} - La respuesta mejorada.
-         */
-        function aplicarEstrategiaCombinada(data) {
-            if (!data.propiedades || data.propiedades.length === 0) {
-                return { ...data, response: `🔍 **No encontré propiedades con esos criterios**\n\n💡 Probá con otras opciones.` };
-            }
-            
-            const indicadores = ['aunque', 'alternativa', 'excelente opción si'];
-            if (indicadores.some(ind => data.response.toLowerCase().includes(ind))) {
-                return {
-                    ...data,
-                    response: `🔍 **Búsqueda en nuestra base**\n\nNo encontré coincidencias exactas, pero te muestro alternativas disponibles:\n\n${data.response}\n\n💡 **¿Por qué considerar estas opciones?**\n• Ubicación privilegiada y valorización segura.\n• Espacio adaptable a tus necesidades.\n• Buen potencial de inversión.`
-                };
-            }
-            return data;
-        }
-
-        // --------------------------------------------------------------------
-        // INICIALIZACIÓN Y EVENT LISTENERS
-        // --------------------------------------------------------------------
-
-        // Mensaje de bienvenida inicial
-        setTimeout(() => {
-            const welcomeMessage = `¡Hola! 👋 Soy tu asistente de Dante Propiedades. Podés usar los filtros, contarme qué necesitás o combinar ambas cosas. ¿En qué puedo ayudarte?`;
-            addMessage(welcomeMessage, 'bot');
-        }, 500);
-
-        // Listeners para el envío de mensajes
-        button.addEventListener('click', send);
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') send();
-        });
-
-        // Verificar estado del servidor periódicamente
-        async function checkServerStatus() {
-            try {
-                const response = await fetch(`${API_URL.replace('/chat', '/status')}`);
-                if (response.ok && (await response.json()).status === 'activo') {
+                    const mensajeFinal = procesarRespuesta(data, esSeguimiento, filtros);
+                    addMessage(mensajeFinal, 'bot');
                     statusText.textContent = 'Conectado';
-                } else {
-                    statusText.textContent = 'Modo Demo';
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    addMessage('⚠️ Error procesando la solicitud. Intenta de nuevo.', 'bot');
+                    statusText.textContent = 'Error';
+                } finally {
+                    hideTypingIndicator();
+                    sendBtn.disabled = false;
+                    userInput.focus();
                 }
-            } catch (error) {
-                statusText.textContent = 'Modo Demo';
-                console.log('🔧 Usando modo demo - Backend no disponible');
             }
-        }
 
-        // Iniciar comprobación del servidor y auto-focus
-        input.focus();
-        checkServerStatus();
-        setInterval(checkServerStatus, 30000);
+            function procesarRespuesta(data, esSeguimiento, filtros) {
+                if (!data.response) return '❌ Respuesta inesperada del servidor.';
+                let mensaje = data.response;
+                if (data.search_performed) {
+                    if (data.results_count > 0) {
+                        mensaje += `\n\n---\n**🎯 Encontré ${data.results_count} propiedades.**`;
+                        actualizarContexto(data.propiedades, filtros);
+                        if (!esSeguimiento) {
+                            mensaje += `\n\n**💡 Tip:** Pide "más detalles" o "ver fotos".`;
+                        }
+                    } else {
+                        mensaje += `\n\n---\n**📭 No encontré propiedades con esos criterios.**`;
+                        actualizarContexto([], filtros);
+                    }
+                }
+                return mensaje;
+            }
 
+            // --------------------------------------------------------------------
+            // FUNCIONES DE FILTROS Y CONTEXTO
+            // --------------------------------------------------------------------
+
+            function obtenerFiltrosSeleccionados() {
+                const filtros = {};
+                const campos = { operacion: 'operacion', barrio: 'neighborhood', tipo: 'tipo', ambientes: 'min_rooms', precioMin: 'min_price', precioMax: 'max_price', metrosMin: 'min_sqm', metrosMax: 'max_sqm' };
+                for (const [id, clave] of Object.entries(campos)) {
+                    const valor = document.getElementById(id).value;
+                    if (valor) {
+                        filtros[clave] = isNaN(parseFloat(valor)) || id === 'operacion' || id === 'barrio' || id === 'tipo' ? valor : parseFloat(valor);
+                    }
+                }
+                return filtros;
+            }
+
+            function construirConsultaConFiltros() {
+                const filtros = obtenerFiltrosSeleccionados();
+                const partes = [];
+                if (filtros.operacion) partes.push(`${filtros.operacion}`);
+                if (filtros.tipo) partes.push(`${filtros.tipo}`);
+                if (filtros.neighborhood) partes.push(`en ${filtros.neighborhood}`);
+                if (filtros.min_rooms) partes.push(`de ${filtros.min_rooms} amb.`);
+                if (filtros.min_price || filtros.max_price) {
+                    let p = 'precio';
+                    if (filtros.min_price) p += ` desde $${filtros.min_price}`;
+                    if (filtros.max_price) p += ` hasta $${filtros.max_price}`;
+                    partes.push(p);
+                }
+                return `Buscar ${partes.join(', ')}`;
+            }
+
+            function limpiarFiltros() {
+                ['operacion', 'barrio', 'tipo', 'ambientes', 'precioMin', 'precioMax', 'metrosMin', 'metrosMax'].forEach(id => document.getElementById(id).value = '');
+            }
+
+            function aplicarFiltros() {
+                userInput.value = construirConsultaConFiltros();
+                send();
+            }
+
+            function resetearChat() {
+                if (confirm('¿Seguro que quieres empezar una nueva conversación?')) {
+                    chatBox.innerHTML = '';
+                    conversacionActual = [];
+                    actualizarContexto([], {});
+                    limpiarFiltros();
+                    addMessage('¡Perfecto! Empecemos de nuevo. ¿Qué buscas?', 'bot');
+                }
+            }
+
+            function actualizarContexto(resultados, filtros) {
+                contextoActual = {
+                    tipo: 'busqueda',
+                    resultados: resultados || [],
+                    propiedad_focus: resultados && resultados.length === 1 ? resultados[0] : null,
+                    filtros_usados: filtros,
+                    timestamp: new Date().toISOString()
+                };
+                console.log('Contexto actualizado:', contextoActual);
+            }
+
+            function esPreguntaSeguimiento(mensaje) {
+                if (!contextoActual.resultados || contextoActual.resultados.length === 0) return false;
+                const msg = mensaje.toLowerCase().trim();
+                const palabrasClave = ['siguiente', 'anterior', 'ver', 'más', 'mas', 'detalles', 'información', 'info', 'fotos', 'contacto'];
+                return palabrasClave.some(p => msg.includes(p));
+            }
+
+            // --------------------------------------------------------------------
+            // INICIALIZACIÓN
+            // --------------------------------------------------------------------
+
+            // Asignar eventos a los botones
+            sendBtn.addEventListener('click', send);
+            userInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') send();
+            });
+            aplicarFiltrosBtn.addEventListener('click', aplicarFiltros);
+            limpiarFiltrosBtn.addEventListener('click', limpiarFiltros);
+            resetearChatBtn.addEventListener('click', resetearChat);
+
+            // Mensaje de bienvenida
+            addMessage('¡Hola! 👋 Soy tu asistente de Dante Propiedades. Usa los filtros o descríbeme qué buscas.', 'bot');
+            
+            userInput.focus();
+        });
     </script>
 </body>
 </html>
