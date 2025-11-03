@@ -1004,12 +1004,12 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
     # 2. Si no se detectó, buscar con patrones regex (más flexible)
     if not barrio_detectado:
         barrio_patterns = [
-            r"en ([a-zA-Záéíóúñ\s]+)",           # "en Palermo", "en Belgrano R"
-            r"barrio ([a-zA-Záéíóúñ\s]+)",       # "barrio Palermo"
-            r"zona ([a-zA-Záéíóúñ\s]+)",         # "zona Recoleta"  
-            r"de ([a-zA-Záéíóúñ\s]+)$",          # "departamento de Palermo"
-            r"el de ([a-zA-Záéíóúñ\s]+)",        # "el de Colegiales"
-            r"la de ([a-zA-Záéíóúñ\s]+)",        # "la de Villa Crespo"
+            r"en ([a-zA-ZáéíóúñÃ\s]+)",           # "en Palermo", "en Belgrano R"
+            r"barrio ([a-zA-ZáéíóúñÃ\s]+)",       # "barrio Palermo"
+            r"zona ([a-zA-ZáéíóúñÃ\s]+)",         # "zona Recoleta"  
+            r"de ([a-zA-ZáéíóúñÃ\s]+)$",          # "departamento de Palermo"
+            r"el de ([a-zA-ZáéíóúñÃ\s]+)",        # "el de Colegiales"
+            r"la de ([a-zA-ZáéíóúñÃ\s]+)",        # "la de Villa Crespo"
         ]
         
         for pattern in barrio_patterns:
@@ -1093,7 +1093,6 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
                 # - Si es el mismo número que ambientes, probablemente sea error
                 # - Si es menor a 1000 y NO son dólares, probablemente sea error
                 mismo_que_ambientes = precio == numero_ambientes_detectado
-                text_lower = texto.lower()
                 es_dolares = any(palabra in text_lower for palabra in ['dólar', 'dolar', 'usd', 'u$s'])
                 precio_muy_bajo = precio < 1000 and not es_dolares
                 
@@ -1113,7 +1112,6 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
     if min_price_match:
         try:
             min_price = int(min_price_match.group(1).replace('.', ''))
-            text_lower = texto.lower()
             es_dolares_min = any(palabra in text_lower for palabra in ['dólar', 'dolar', 'usd', 'u$s'])
             precio_muy_bajo_min = min_price < 1000 and not es_dolares_min
             
@@ -1134,7 +1132,7 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
             # Verificar que no sea el mismo número usado para ambientes
             if metros != numero_ambientes_detectado:
                 filters["min_sqm"] = metros
-                print(f"📏 Metros cuadrados detectados: {filters['min_sqm']}m²")
+                print(f"📐 Metros cuadrados detectados: {filters['min_sqm']}m²")
             else:
                 print(f"🛑 Ignorando metros {metros} - mismo número que ambientes")
         except ValueError:
@@ -1142,7 +1140,6 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
 
     print(f"🎯 Filtros finales detectados: {filters}")
     return filters
-
 
 def detectar_ambientes_especificos_seguimiento(text_lower: str) -> Dict[str, Any]:
     """Detección ESPECIALIZADA para consultas de seguimiento con ambientes específicos - VERSIÓN GENÉRICA"""
@@ -1388,14 +1385,48 @@ def detectar_ambientes_especificos_seguimiento(text_lower: str) -> Dict[str, Any
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
+
+    metrics.total_requests += 1
+
+    es_seguimiento = request.es_seguimiento
+    filtros_actuales = request.filtros_actuales or {}
+    
+    print(f"CONTEXTO - Es seguimiento: {es_seguimiento}")
+    
+    # Inicialización defensiva de variables
+    # --- LA CORRECCIÓN ES ESTA LÍNEA ---
+    # Aseguramos que text_lower siempre exista para el cache más abajo
+    text_lower = request.query.lower().strip() 
+    
+    response_text = ""
+    filtros_nuevos = None
+    source = "LLM" # default
+
+    # try:
+    #     # 2. PROCESAMIENTO INICIAL (Cache y pre-chequeos)
+    #     if not es_seguimiento:
+    #         # Chequeo para limpiar cache
+    #         if "limpiar cache" in text_lower or "reiniciar cache" in text_lower:
+# ... el resto del código continúa aquí
+
+
+
+
+
+
+
+
     """Endpoint principal para chat con el asistente inmobiliario"""
     start_time = time.time()
     metrics.increment_requests()
     
     try:
-        user_text = request.message.strip()
-        channel = request.channel.strip()
-        filters_from_frontend = request.filters if request.filters else {}
+        if not es_seguimiento:
+        # Chequeo para limpiar cache
+            if "limpiar cache" in text_lower or "reiniciar cache" in text_lower:
+# ... el resto del código continúa aquí        user_text = request.message.strip()
+                channel = request.channel.strip()
+                filters_from_frontend = request.filters if request.filters else {}
 
         # 👇 AGREGAR DETECCIÓN DE CONTEXTO
         contexto_anterior = request.contexto_anterior if hasattr(request, 'contexto_anterior') else None
