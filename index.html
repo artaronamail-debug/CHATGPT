@@ -545,8 +545,188 @@
     </div>
 
     <script>
-        const API_URL = "https://dante-propiedades-backend.onrender.com/chat";
         
+        
+
+// 🔥 FUNCIÓN TEMPORAL - Arreglar error aplicarFiltros
+const API_URL = "https://dante-propiedades-backend.onrender.com/chat";
+
+// 🔥 FUNCIÓN COMPLETA - Arreglar error aplicarFiltros
+function aplicarFiltros() {
+    console.log('🔍 Aplicando filtros...');
+    
+    // Obtener valores simples de los filtros
+    const barrio = document.getElementById('barrio').value;
+    const tipo = document.getElementById('tipo').value;
+    const ambientes = document.getElementById('ambientes').value;
+    const precioMin = document.getElementById('precioMin').value;
+    const precioMax = document.getElementById('precioMax').value;
+    
+    // Construir mensaje simple
+    let mensaje = 'Buscar ';
+    if (tipo) mensaje += tipo + ' ';
+    if (barrio) mensaje += 'en ' + barrio + ' ';
+    if (ambientes) mensaje += ambientes + ' ambientes ';
+    if (precioMin || precioMax) {
+        mensaje += 'precio ';
+        if (precioMin) mensaje += 'desde ' + precioMin + ' ';
+        if (precioMax) mensaje += 'hasta ' + precioMax;
+    }
+    
+    // Poner en input
+    const input = document.getElementById('userInput');
+    input.value = mensaje.trim();
+    
+    // Enfocar para que el usuario pueda enviar
+    input.focus();
+}
+
+// 🔥 ESTRATEGIA COMBINADA
+// 🔥 ESTRATEGIA COMBINADA
+function aplicarEstrategiaCombinada(data) {
+    if (!data.propiedades || data.propiedades.length === 0) {
+        return {
+            ...data,
+            response: `🔍 **No encontré propiedades con esos criterios**\n\n💡 Probá con otras opciones.`
+        };
+    }
+    
+    const mensajeOriginal = data.response;
+    const indicadoresNoExacto = ['aunque', 'podría ser', 'sin embargo', 'alternativa', 'excelente opción si'];
+    const esCoincidenciaNoExacta = indicadoresNoExacto.some(indicator => 
+        mensajeOriginal.toLowerCase().includes(indicator)
+    );
+    
+    if (esCoincidenciaNoExacta) {
+        return {
+            ...data,
+            response: `🔍 **Búsqueda en nuestra base**\n\n` +
+                    `No encontré coincidencias exactas, pero te muestro alternativas disponibles:\n\n` +
+                    `${mensajeOriginal}\n\n` +
+                    `💡 **¿Por qué considerar estas opciones?**\n` +
+                    `• Ubicación privilegiada y valorización segura\n` +
+                    `• Espacio adaptable a tus necesidades\n` +
+                    `• Buen potencial de inversión o alquiler\n\n` +
+                    `📞 **¿Querés que busquemos algo más específico?**\n` +
+                    `Contactanos para acceso a propiedades no publicadas.`
+        };
+    }
+    
+    return data;
+}
+
+// 🔥 MODO DEMO - Datos de ejemplo para probar el frontend
+const datosDemo = {
+    "palermo": {
+        response: "¡Hola! Encontré estas propiedades en Palermo:\n\n🏠 **Departamento en Palermo**\n• 2 ambientes | 45m² | $280,000\n• Con balcón y amenities\n\n🏠 **PH en Palermo**\n• 3 ambientes | 60m² | $350,000\n• Con patio y lavadero\n\n¿Te interesa alguna de estas opciones?",
+        search_performed: true,
+        results_count: 2,
+        propiedades: [
+            {
+                id: "demo_1",
+                title: "Departamento en Palermo",
+                neighborhood: "Palermo",
+                price: 280000,
+                rooms: 2,
+                surface: "45.0 m2",
+                description: "Moderno departamento con balcón"
+            },
+            {
+                id: "demo_2", 
+                title: "PH en Palermo",
+                neighborhood: "Palermo",
+                price: 350000,
+                rooms: 3,
+                surface: "60.0 m2",
+                description: "PH amplio con patio"
+            }
+        ]
+    },
+    "monoambiente en recoleta": {
+        response: "🔍 **No encontré monoambientes en Recoleta**\n\n**🏠 Te recomiendo esta alternativa disponible:**\n\n🏠 **Departamento en Recoleta**\n• 3 ambientes | 95m² | $420,000\n• Ubicación premium\n\n**💡 ¿Por qué considerar esta opción?**\n• Excelente ubicación y valorización\n• Espacio adaptable para home office\n• Potencial de alquiler de habitaciones\n\n**🔄 También podés probar:**\n• \"Monoambientes en Palermo\"\n• \"Departamentos en Belgrano\"",
+        search_performed: true,
+        results_count: 1,
+        propiedades: [
+            {
+                id: "demo_3",
+                title: "Departamento en Recoleta",
+                neighborhood: "Recoleta", 
+                price: 420000,
+                rooms: 3,
+                surface: "95.0 m2",
+                description: "Departamento amplio en zona premium"
+            }
+        ]
+    },
+    "terreno en venta": {
+        response: "¡Hola! Encontré este terreno disponible:\n\n🏞️ **Terreno en Boedo - Para desarrollo**\n• 306m² | $600,000\n• Zonificación residencial\n• Ideal para proyecto inmobiliario\n\n**📈 Potencial de inversión:**\n• Ubicación en crecimiento\n• Posibilidad de construir 2 plantas\n• Excelente relación precio/metro\n\n¿Te interesa conocer más detalles?",
+        search_performed: true,
+        results_count: 1,
+        propiedades: [
+            {
+                id: "demo_4",
+                title: "Terreno en Boedo, para desarrollo",
+                neighborhood: "Boedo",
+                price: 600000,
+                rooms: 0,
+                surface: "306.0 m2",
+                description: "Terreno ideal para desarrollo inmobiliario"
+            }
+        ]
+    }
+}
+
+    // Construir mensaje natural para el chat
+    let mensajeNatural = 'Buscar propiedades';
+    
+    if (filtros.operacion) mensajeNatural += ` para ${filtros.operacion}`;
+    if (filtros.neighborhood) mensajeNatural += ` en ${filtros.neighborhood}`;
+    if (filtros.tipo) mensajeNatural += `, tipo ${filtros.tipo}`;
+    if (filtros.min_rooms) mensajeNatural += `, mínimo ${filtros.min_rooms} ambientes`;
+    if (filtros.min_price || filtros.max_price) {
+        mensajeNatural += `, precio`;
+        if (filtros.min_price) mensajeNatural += ` desde $${filtros.min_price}`;
+        if (filtros.max_price) mensajeNatural += ` hasta $${filtros.max_price}`;
+    }
+    
+    // Poner el mensaje en el input
+    const input = document.getElementById('userInput');
+    input.value = mensajeNatural;
+    
+    // Enviar automáticamente después de un breve delay
+    setTimeout(() => {
+        const sendBtn = document.getElementById('sendBtn');
+        if (sendBtn && !sendBtn.disabled) {
+            send();
+        }
+    }, 500);
+ // ← ¡IMPORTANTE: ESTA LLAVE CIERRA LA FUNCIÓN!
+    // Construir mensaje natural para el chat
+    const descripcionFiltros = formatearFiltrosParaMensaje(filtros);
+    
+    
+    if (filtros.neighborhood) {
+        mensajeNatural += ` en ${filtros.neighborhood}`;
+    }
+    if (filtros.tipo) {
+        mensajeNatural += `, tipo ${filtros.tipo}`;
+    }
+    if (filtros.min_rooms) {
+        mensajeNatural += `, mínimo ${filtros.min_rooms} ambientes`;
+    }
+    if (filtros.min_price || filtros.max_price) {
+        mensajeNatural += `, precio`;
+        if (filtros.min_price) mensajeNatural += ` desde $${filtros.min_price}`;
+        if (filtros.max_price) mensajeNatural += ` hasta $${filtros.max_price}`;
+    }
+    
+    // Poner el mensaje en el input y enviar
+    const input = document.getElementById('userInput');
+    input.value = mensajeNatural;
+    
+    // Enviar automáticamente
+    send();
+
 
 // 🔥 MODO DEMO - Datos de ejemplo para probar el frontend
 const datosDemo = {
@@ -608,15 +788,33 @@ const datosDemo = {
         ]
     }
 };
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+    
+    const mensajeOriginal = data.response;
+    const indicadoresNoExacto = ['aunque', 'podría ser', 'sin embargo', 'alternativa', 'excelente opción si'];
+    const esCoincidenciaNoExacta = indicadoresNoExacto.some(indicator => 
+        mensajeOriginal.toLowerCase().includes(indicator)
+    );
+    
+    if (esCoincidenciaNoExacta) {
+        return {
+            ...data,
+            response: `🔍 **Búsqueda en nuestra base**\n\n` +
+                    `No encontré coincidencias exactas, pero te muestro alternativas disponibles:\n\n` +
+                    `${mensajeOriginal}\n\n` +
+                    `💡 **¿Por qué considerar estas opciones?**\n` +
+                    `• Ubicación privilegiada y valorización segura\n` +
+                    `• Espacio adaptable a tus necesidades\n` +
+                    `• Buen potencial de inversión o alquiler\n\n` +
+                    `📞 **¿Querés que busquemos algo más específico?**\n` +
+                    `Contactanos para acceso a propiedades no publicadas.`
+        };
+    }
+    
+    return data;
+
+         
         
         const chatBox = document.getElementById('chatBox');
         const input = document.getElementById('userInput');
@@ -840,41 +1038,6 @@ const datosDemo = {
             return consulta;
         }
 
-        function aplicarFiltros() {
-                const filtros = obtenerFiltrosSeleccionados();
-                
-                if (Object.keys(filtros).length === 0) {
-                    alert('Seleccioná al menos un filtro para buscar.');
-                    return;
-                }
-
-                // Construir mensaje MÁS NATURAL para el backend
-                const descripcionFiltros = formatearFiltrosParaMensaje(filtros);
-                
-                // Mensaje más natural que Gemini entenderá mejor
-                let mensajeNatural = `Buscar propiedades para ${filtros.operacion || 'alquiler o venta'}`;
-                
-                if (filtros.neighborhood) {
-                    mensajeNatural += ` en ${filtros.neighborhood}`;
-                }
-                if (filtros.tipo) {
-                    mensajeNatural += `, tipo ${filtros.tipo}`;
-                }
-                if (filtros.min_rooms) {
-                    mensajeNatural += `, mínimo ${filtros.min_rooms} ambientes`;
-                }
-                if (filtros.min_price || filtros.max_price) {
-                    mensajeNatural += `, precio`;
-                    if (filtros.min_price) mensajeNatural += ` desde $${filtros.min_price}`;
-                    if (filtros.max_price) mensajeNatural += ` hasta $${filtros.max_price}`;
-                }
-                
-                input.value = mensajeNatural;
-                
-                // Enviar automáticamente
-                send();
-        }
-
 
         function limpiarFiltros() {
             document.getElementById('operacion').value = '';
@@ -921,82 +1084,85 @@ const datosDemo = {
                     es_seguimiento: esSeguimiento
                 }
             });
+            
             addMessage(msg, 'user');
             input.value = '';
             button.disabled = true;
-            
+
             showTypingIndicator();
 
             try {
-                const payload = {
-                    message: msg,
-                    channel: 'web',
-                    filters: filtrosSeleccionados
-                };
+                // 🔥 MODO DEMO TEMPORAL - Reemplazar llamada al backend
+                console.log('🔍 Modo demo activo para:', msg);
 
-                // AGREGAR CONTEXTO SI ES SEGUIMIENTO
-                if (esSeguimiento && contextoActual.resultados.length > 0) {
-                    payload.contexto_anterior = contextoActual;
-                    payload.es_seguimiento = true;
-                    console.log('📤 Enviando contexto al backend:', contextoActual);
+                let data;
+                const mensajeLower = msg.toLowerCase().trim();
+
+                // Verificar si tenemos datos demo específicos para esta búsqueda
+                if (datosDemo[mensajeLower]) {
+                    console.log('🎭 Usando datos demo específicos');
+                    data = datosDemo[mensajeLower];
+                } else {
+                    // Búsqueda genérica demo
+                    console.log('🔍 Búsqueda genérica en modo demo');
+                    data = {
+                        response: `🔍 **Búsqueda: \"${msg}\"**\n\n` +
+                                `**💡 Modo demostración activo**\n` +
+                                `El backend está en mantenimiento. Búsquedas demo disponibles:\n\n` +
+                                `• "palermo" (2 propiedades)\n` +
+                                `• "monoambiente en recoleta" (1 alternativa)\n` +
+                                `• "terreno en venta" (1 terreno)\n\n` +
+                                `**📞 Sistema completo pronto**\n` +
+                                `Próximamente tendrás acceso a toda nuestra base de propiedades.`,
+                        search_performed: false,
+                        results_count: 0,
+                        propiedades: []
+                    };
                 }
 
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
+                console.log('✅ Respuesta demo:', data);
 
-                if (!response.ok) {
-                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                // Aplicar la estrategia combinada
+                const dataMejorada = aplicarEstrategiaCombinada(data);
+                let mensajeFinal = '';
+
+                if (dataMejorada.response) {
+                    let mensajeMejorado = dataMejorada.response;
+                    
+                    if (dataMejorada.search_performed && dataMejorada.results_count !== null) {
+                        if (dataMejorada.results_count > 0) {
+                            mensajeMejorado += `\n\n---\n**🎯 BÚSQUEDA EXITOSA**\n📊 **Encontré ${dataMejorada.results_count} propiedades** que coinciden con tu búsqueda.`;
+                            
+                            if (dataMejorada.propiedades && dataMejorada.propiedades.length > 0) {
+                                actualizarContexto(dataMejorada.propiedades, filtrosSeleccionados, 'busqueda');
+                            }
+
+                            if (!esSeguimiento) {
+                                mensajeMejorado += `\n\n**💡 ¿Necesitás más información?** Podés preguntar:\n• "Más detalles sobre el primero"\n• "Ver fotos"\n• "Contacto para esta propiedad"`;
+                            }
+                        } else {
+                            mensajeMejorado += `\n\n---\n**🔍 BÚSQUEDA REALIZADA**\n📭 No encontré propiedades con esos criterios.`;
+                            actualizarContexto([], {}, 'busqueda');
+                        }
+                    }
+                    
+                    mensajeFinal = mensajeMejorado;
+                } else {
+                    mensajeFinal = '❌ Respuesta inesperada del servidor';
                 }
 
-                const data = await response.json();
-                console.log('✅ Respuesta completa:', data);
-
-                // 🔥 MEJOR MANEJO DE RESPUESTAS CON CONTEXTO - ESTRATEGIA COMBINADA
-                function aplicarEstrategiaCombinada(data) {
-                    if (!data.propiedades || data.propiedades.length === 0) {
-                        return {
-                            ...data,
-                            response: `🔍 **No encontré propiedades con esos criterios exactos**\n\n` +
-                                    `**💡 Te sugiero:**\n` +
-                                    `• Probar con otros barrios o características\n` +
-                                    `• Ajustar el presupuesto o cantidad de ambientes\n` +
-                                    `• Explorar diferentes tipos de propiedad\n\n` +
-                                    `**📞 Búsqueda personalizada**\n` +
-                                    `Contame exactamente qué buscás y te ayudo a encontrar las mejores opciones disponibles.`
-                        };
-                    }
-                    
-                    const mensajeOriginal = data.response;
-                    
-                    // Detectar cuando la IA está "justificando" propiedades no exactas
-                    const indicadoresNoExacto = ['aunque', 'podría ser', 'sin embargo', 'alternativa', 'excelente opción si'];
-                    const esCoincidenciaNoExacta = indicadoresNoExacto.some(indicator => 
-                        mensajeOriginal.toLowerCase().includes(indicator)
-                    );
-                    
-                    if (esCoincidenciaNoExacta) {
-                        return {
-                            ...data,
-                            response: `🔍 **Búsqueda en nuestra base**\n\n` +
-                                    `No encontré coincidencias exactas, pero te muestro alternativas disponibles:\n\n` +
-                                    `${mensajeOriginal}\n\n` +
-                                    `💡 **¿Por qué considerar estas opciones?**\n` +
-                                    `• Ubicación privilegiada y valorización segura\n` +
-                                    `• Espacio adaptable a tus necesidades\n` +
-                                    `• Buen potencial de inversión o alquiler\n\n` +
-                                    `📞 **¿Querés que busquemos algo más específico?**\n` +
-                                    `Contactanos para acceso a propiedades no publicadas.`
-                        };
-                    }
-
-                    return data;
-                    }
+                addMessage(mensajeFinal);
+                statusText.textContent = 'Conectado';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('⚠️ Error procesando la solicitud. Por favor, intentá nuevamente.');
+                statusText.textContent = 'Error';
+            } finally {
+                hideTypingIndicator();
+                button.disabled = false;
+                input.focus();
+}
 
 // Aplicar la estrategia combinada
 const dataMejorada = aplicarEstrategiaCombinada(data);
@@ -1061,10 +1227,10 @@ if (!dataMejorada.search_performed && esSeguimiento) {
 }
 
 // MOSTRAR EL MENSAJE FINAL
-addMessage(mensajeFinal);
-statusText.textContent = 'Conectado';
-
-} catch (error) {
+try {
+    addMessage(mensajeFinal);
+    statusText.textContent = 'Conectado';
+} catch (error) {  // ← CON ESPACIO
     console.error('Error:', error);
     addMessage('⚠️ No se pudo conectar con el servidor. Por favor, intentá nuevamente en unos momentos.');
     statusText.textContent = 'Error de conexión';
@@ -1072,7 +1238,6 @@ statusText.textContent = 'Conectado';
     hideTypingIndicator();
     button.disabled = false;
     input.focus();
-}
 }
 
 // Event listeners
@@ -1092,17 +1257,29 @@ input.focus();
 
 
 
-// Verificar estado del servidor
+
+// Verificar estado del servidor - MODO DEMO MEJORADO
 async function checkServerStatus() {
     try {
-        const response = await fetch(API_URL.replace('/chat', '/status'));
+        // Intentar conectar al backend real
+        const response = await fetch('https://dante-propiedades-backend.onrender.com/status');
         if (response.ok) {
-            statusText.textContent = 'Conectado';
+            const status = await response.json();
+            if (status.status === 'activo') {
+                statusText.textContent = 'Conectado';
+                statusText.style.color = '#10b981'; // Verde
+            } else {
+                statusText.textContent = 'Modo Demo';
+                statusText.style.color = '#f59e0b'; // Amarillo/naranja
+            }
         } else {
-            statusText.textContent = 'Servidor inactivo';
+            statusText.textContent = 'Modo Demo';
+            statusText.style.color = '#f59e0b';
         }
     } catch (error) {
-        statusText.textContent = 'Sin conexión';
+        statusText.textContent = 'Modo Demo';
+        statusText.style.color = '#f59e0b';
+        console.log('🔧 Usando modo demo - Backend no disponible');
     }
 }
 
