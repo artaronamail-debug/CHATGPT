@@ -1372,6 +1372,7 @@ async def chat(request: ChatRequest):
     
     try:
         user_text = request.message.strip()
+        text_lower = user_text.lower()
         channel = request.channel.strip()
         filters_from_frontend = request.filters if request.filters else {}
 
@@ -1420,7 +1421,6 @@ async def chat(request: ChatRequest):
                         f"Operaciones disponibles: {', '.join(operaciones_disponibles)}."
                     )
 
-                    text_lower = user_text.lower()
                     filters, results = {}, None
                     search_performed = False
                     property_details = None
