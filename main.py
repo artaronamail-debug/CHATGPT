@@ -1459,7 +1459,13 @@ async def chat(request: ChatRequest):
                         if property_details:
                             print(f"✅ USANDO propiedad de {ambientes_solicitados} ambientes: {property_details.get('title')}")
                              
-                    es_seguimiento_backend = any(palabra in text_lower for palabra in palabras_seguimiento_backend)
+                    es_seguimiento_backend = False
+                    for palabra in palabras_seguimiento_backend:
+                        if palabra in text_lower:
+                            es_seguimiento_backend = True
+                            break
+                    
+                   
 
                     # COMBINAR: seguimiento del frontend + detección backend
                     es_seguimiento_final = es_seguimiento or es_seguimiento_backend
