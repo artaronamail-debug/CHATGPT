@@ -1093,6 +1093,7 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
                 # - Si es el mismo número que ambientes, probablemente sea error
                 # - Si es menor a 1000 y NO son dólares, probablemente sea error
                 mismo_que_ambientes = precio == numero_ambientes_detectado
+                text_lower = texto.lower()
                 es_dolares = any(palabra in text_lower for palabra in ['dólar', 'dolar', 'usd', 'u$s'])
                 precio_muy_bajo = precio < 1000 and not es_dolares
                 
@@ -1112,6 +1113,7 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
     if min_price_match:
         try:
             min_price = int(min_price_match.group(1).replace('.', ''))
+            text_lower = texto.lower()
             es_dolares_min = any(palabra in text_lower for palabra in ['dólar', 'dolar', 'usd', 'u$s'])
             precio_muy_bajo_min = min_price < 1000 and not es_dolares_min
             
