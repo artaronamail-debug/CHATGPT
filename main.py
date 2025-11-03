@@ -41,6 +41,26 @@ print(f"   GEMINI_API_KEYS: {os.getenv('GEMINI_API_KEYS', 'NO DEFINIDA')}")
 print("🔍 VARIABLE GEMINI_KEYS específica:")
 print(f"   GEMINI_KEYS: {os.getenv('GEMINI_KEYS', 'NO DEFINIDA')}")
 
+def verificar_coincidencia(texto, palabras_clave):
+    # Convertir a minúsculas y asegurar que es string
+    text_lower = str(texto).lower() if texto else ""
+    
+    print(f"🔍 Texto analizado: '{text_lower}'")
+    print(f"🔍 Palabras clave: {palabras_clave}")
+    
+    # Verificar cada palabra individualmente
+    for palabra in palabras_clave:
+        palabra_str = str(palabra).lower()
+        contiene = palabra_str in text_lower
+        print(f"   '{palabra_str}' en texto: {contiene}")
+    
+    # Resultado final
+    resultado = any(str(palabra).lower() in text_lower for palabra in palabras_clave)
+    print(f"✅ Resultado final: {resultado}")
+    
+    return resultado
+
+# Usar la función
 
 
 def call_gemini_with_rotation(prompt: str) -> str:
@@ -285,7 +305,7 @@ def procesar_mensaje(user_text, propiedades_contexto, propiedades_filtradas):
         return generar_respuesta_general(propiedades_filtradas)
     
 
-
+es_seguimiento_backend = verificar_coincidencia(texto, palabras_seguimiento_backend)
 
 
 @asynccontextmanager
