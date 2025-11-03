@@ -1544,8 +1544,8 @@ async def chat(request: ChatRequest):
                             for prop in propiedades_contexto:
                                 if (barrio in prop.get('neighborhood', '').lower() or 
                                     barrio in prop.get('title', '').lower()):
-                                    propiedad_específica = prop
-                                    print(f"@ Detectada propiedad por barrio: {propiedad_específica.get('title')} - {propiedad_específica}")
+                                    propiedad_especifica = prop
+                                    print(f"@ Detectada propiedad por barrio: {propiedad_especifica.get('title')} - {propiedad_especifica}")
                                     encontrado = True
                                     break
                             if encontrado:
