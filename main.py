@@ -1383,570 +1383,703 @@ def detectar_ambientes_especificos_seguimiento(text_lower: str) -> Dict[str, Any
     print(f"🔍 DEBUG AMBIENTES - Ningún patrón detectó ambientes")
     return filters
 
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-
-    metrics.total_requests += 1
-
-    es_seguimiento = request.es_seguimiento
-    filtros_actuales = request.filtros_actuales or {}
-    
-    print(f"CONTEXTO - Es seguimiento: {es_seguimiento}")
-    
-    # Inicialización defensiva de variables
-    # --- LA CORRECCIÓN ES ESTA LÍNEA ---
-    # Aseguramos que text_lower siempre exista para el cache más abajo
-    text_lower = request.query.lower().strip() 
-    
-    response_text = ""
-    filtros_nuevos = None
-    source = "LLM" # default
-
-    # try:
-    #     # 2. PROCESAMIENTO INICIAL (Cache y pre-chequeos)
-    #     if not es_seguimiento:
-    #         # Chequeo para limpiar cache
-    #         if "limpiar cache" in text_lower or "reiniciar cache" in text_lower:
-# ... el resto del código continúa aquí
-
-
-
-
-
-
-
-
     """Endpoint principal para chat con el asistente inmobiliario"""
     start_time = time.time()
     metrics.increment_requests()
     
     try:
-        if not es_seguimiento:
-        # Chequeo para limpiar cache
-            if "limpiar cache" in text_lower or "reiniciar cache" in text_lower:
-# ... el resto del código continúa aquí        user_text = request.message.strip()
-                channel = request.channel.strip()
-                filters_from_frontend = request.filters if request.filters else {}
+        user_text = request.message.strip()
+        channel = request.channel.strip()
+        filters_from_frontend = request.filters if request.filters else {}
+        
+        # 🔥 DEFINIR text_lower INMEDIATAMENTE
+        text_lower = user_text.lower()
+        
+        # 🔥 DEBUG: Verificar que text_lower existe
+        print(f"✅ text_lower definido: '{text_lower}'")
+        print(f"✅ Tipo de text_lower: {type(text_lower)}")
 
-        # 👇 AGREGAR DETECCIÓN DE CONTEXTO
         contexto_anterior = request.contexto_anterior if hasattr(request, 'contexto_anterior') else None
         es_seguimiento = request.es_seguimiento if hasattr(request, 'es_seguimiento') else False
 
         if not user_text:
             raise HTTPException(status_code=400, detail="El mensaje no puede estar vacío")
 
-            # 🔥🔥🔥 AGREGAR ESTOS PRINTS DEBUG NUEVOS AQUÍ 🔥🔥🔥
-        print(f"🔍 DEBUG - user_text: '{user_text}'")
-        print(f"🔍 DEBUG - es_seguimiento: {es_seguimiento}")
-        print(f"🔍 DEBUG - contexto_anterior existe: {contexto_anterior is not None}")
+        print(f"🔥 Mensaje recibido: {user_text}")
+        print(f"📱 Canal: {channel}")
+        print(f"🎯 Filtros del frontend: {filters_from_frontend}")
+        print(f"🔍 CONTEXTO - Es seguimiento: {es_seguimiento}")
+        
         if contexto_anterior:
-            print(f"🔍 DEBUG - resultados en contexto: {len(contexto_anterior.get('resultados', []))}")
-            if contexto_anterior.get('resultados'):
-                primera_prop = contexto_anterior['resultados'][0]
-                print(f"🔍 DEBUG - primera propiedad en contexto: {primera_prop.get('title')} - {primera_prop.get('rooms')} amb")
-        else:
-            print(f"🔍 DEBUG - NO hay contexto_anterior")
-
-            # 👇 TUS PRINTS ACTUALES SE MANTIENEN
-            print(f"📥 Mensaje recibido: {user_text}")
-            print(f"📱 Canal: {channel}")
-            print(f"🎯 Filtros del frontend: {filters_from_frontend}")
-            # 👇 AGREGAR LOGS DE CONTEXTO
-            print(f"🔍 CONTEXTO - Es seguimiento: {es_seguimiento}")
-            if contexto_anterior:
-                print(f"📋 Contexto anterior: {len(contexto_anterior.get('resultados', []))} propiedades")
-                if contexto_anterior.get('resultados'):
-                    primera_propiedad = contexto_anterior['resultados'][0]
-                    print(f"🏠 Propiedad en contexto: {primera_propiedad.get('title', 'N/A')} - ${primera_propiedad.get('price', 'N/A')}")
-                    # Cargar datos de propiedades desde JSON
-                    propiedades_json = cargar_propiedades_json("properties.json")
-                    barrios_disponibles = extraer_barrios(propiedades_json)
-                    tipos_disponibles = extraer_tipos(propiedades_json)
-                    operaciones_disponibles = extraer_operaciones(propiedades_json)
-                    
-                    historial = get_historial_canal(channel)
-                    contexto_historial = "\nHistorial reciente:\n" + "\n".join(f"- {m}" for m in historial) if historial else ""
-
-                    contexto_dinamico = (
-                        f"Barrios disponibles: {', '.join(barrios_disponibles)}.\n"
-                        f"Tipos de propiedad: {', '.join(tipos_disponibles)}.\n"
-                        f"Operaciones disponibles: {', '.join(operaciones_disponibles)}."
-                    )
-
-                    text_lower = user_text.lower()
-                    filters, results = {}, None
-                    search_performed = False
-                    property_details = None
-
-                    # 👇 AGREGAR DETECCIÓN MEJORADA DE SEGUIMIENTO
-                    palabras_seguimiento_backend = [
-                        'más', 'mas', 'detalles', 'brindar', 'brindame', 'dime', 'cuéntame', 
-                        'cuentame', 'información', 'informacion', 'características', 'caracteristicas',
-                        'este', 'esta', 'ese', 'esa', 'primero', 'primera', 'segundo', 'segunda',
-                        'propiedad', 'departamento', 'casa', 'ph', 'casaquinta', 'terreno', 'terrenos'
-                    ]
-                    
-                    # 🔥🔥🔥 AGREGAR LA SOLUCIÓN TEMPORAL GENÉRICA JUSTO AQUÍ 🔥🔥🔥
-                    import re
-
-                    # Buscar cualquier número de ambientes en el texto
-                    ambientes_match = re.search(r'(\d+)\s*amb', user_text.lower())
-                    if ambientes_match:
-                        ambientes_solicitados = int(ambientes_match.group(1))
-                        print(f"🎯 DETECCIÓN DIRECTA TEMPORAL: Usuario pide {ambientes_solicitados} ambientes")
-                        
-                        # Buscar en los resultados actuales
-                        if results:
-                            propiedades_filtradas = [prop for prop in results if prop.get('rooms') == ambientes_solicitados]
-                            if propiedades_filtradas:
-                                property_details = propiedades_filtradas[0]
-                                print(f"✅ Propiedad de {ambientes_solicitados} ambientes encontrada en results: {property_details.get('title')}")
-                        
-                        # Buscar en el contexto anterior
-                        elif contexto_anterior and contexto_anterior.get('resultados'):
-                            propiedades_filtradas = [prop for prop in contexto_anterior['resultados'] if prop.get('rooms') == ambientes_solicitados]
-                            if propiedades_filtradas:
-                                property_details = propiedades_filtradas[0]
-                                print(f"✅ Propiedad de {ambientes_solicitados} ambientes encontrada en contexto: {property_details.get('title')}")
-                        
-                        if property_details:
-                            print(f"✅ USANDO propiedad de {ambientes_solicitados} ambientes: {property_details.get('title')}")
-                             
-                    es_seguimiento_backend = False
-                    for palabra in palabras_seguimiento_backend:
-                        if palabra in text_lower:
-                            es_seguimiento_backend = True
-                            break
-                    
-                   
-
-                    # COMBINAR: seguimiento del frontend + detección backend
-                    es_seguimiento_final = es_seguimiento or es_seguimiento_backend
-
-                    print(f"🔍 CONTEXTO - Es seguimiento frontend: {es_seguimiento}")
-                    print(f"🔍 CONTEXTO - Es seguimiento backend: {es_seguimiento_backend}")
-                    print(f"🔍 CONTEXTO - Es seguimiento FINAL: {es_seguimiento_final}")
-
-                    if contexto_anterior:
-                        print(f"📋 Contexto anterior recibido: {len(contexto_anterior.get('resultados', []))} propiedades")
-                        if contexto_anterior.get('resultados'):
-                            primera_propiedad = contexto_anterior['resultados'][0]
-                            print(f"🏠 Propiedad en contexto: {primera_propiedad.get('title', 'N/A')} - ${primera_propiedad.get('price', 'N/A')}")
-                    
-        # 👇 DETECCIÓN MEJORADA DE SEGUIMIENTO (usa contexto o historial)
+            print(f"📋 Contexto anterior: {len(contexto_anterior.get('resultados', []))} propiedades")
         
-        # PRIORIDAD 1: Usar contexto del frontend si está disponible
-
-
-
-        if es_seguimiento and contexto_anterior and contexto_anterior.get('resultados'):
-            print("🎯 Usando contexto del frontend para seguimiento - CON DETECCIÓN MEJORADA")
-            propiedades_contexto = contexto_anterior['resultados']
-            if propiedades_contexto:
-                # 🔥 REEMPLAZAR CON LÓGICA DE DETECCIÓN INTELIGENTE:
-                propiedad_especifica = None
-                
-                # 🔥🔥🔥 NUEVO: 0. DETECCIÓN POR AMBIENTES ESPECÍFICOS (PRIMERA PRIORIDAD)
-                filters_ambientes = detectar_ambientes_especificos_seguimiento(text_lower)
-                if "min_rooms" in filters_ambientes:
-                    ambientes_solicitados = filters_ambientes["min_rooms"]
-                    print(f"🎯 FILTRANDO por {ambientes_solicitados} ambientes específicos")
-                    
-                    # Filtrar propiedades que tengan exactamente esos ambientes
-                    propiedades_filtradas = [
-                        prop for prop in propiedades_contexto 
-                        if prop.get('rooms') == ambientes_solicitados
-                    ]
-                    
-                    if propiedades_filtradas:
-                        propiedad_especifica = propiedades_filtradas[0]
-                        print(f"✅ Encontrada propiedad con {ambientes_solicitados} ambientes: {propiedad_especifica.get('title')}")
-                    else:
-                        print(f"❌ No hay propiedades con {ambientes_solicitados} ambientes en el contexto")
-                
-                # 1. Detectar por PRECIO específico
-                if not propiedad_especifica:
-                    import re
-                    precio_pattern = r'(?:\$?\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(?:mil|mil|k|K)?'
-                    match_precio = re.search(precio_pattern, user_text)
-                    print(f"🔍 DEBUG Precio - Match: {match_precio}")
-                    print(f"🔍 DEBUG Precio - Texto original: '{user_text}'")
-                    
-                    if match_precio:
-                        precio_texto = match_precio.group(1)
-                        print(f"🔍 DEBUG Precio - Texto capturado: '{precio_texto}'")
-                        
-                        precio_limpio = precio_texto.replace('.', '').replace(',', '')
-                        print(f"🔍 DEBUG Precio - Texto limpio: '{precio_limpio}'")
-                        
-                        try:
-                            precio_buscado = int(precio_limpio)
-                            print(f"🎯 Precio detectado en consulta: ${precio_buscado}")
-                            
-                            for prop in propiedades_contexto:
-                                print(f"🔍 DEBUG - Comparando: {prop.get('title')} - ${prop.get('price')}")
-                                if prop.get('price') == precio_buscado:
-                                    propiedad_especifica = prop
-                                    print(f"🎯 Detectada propiedad por precio: {propiedad_especifica.get('title')} - ${propiedad_especifica.get('price')}")
-                                    break
-                            if not propiedad_especifica:
-                                print(f"⚠️ No se encontró propiedad con precio ${precio_buscado}")
-                        except ValueError as e:
-                            print(f"⚠️ No se pudo convertir el precio detectado: {e}")
-                    
-                # 2. Detectar por BARRIO específico
-                if not propiedad_especifica:
-                    barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "soho","almagro", "villa crespo", "san isidro", "vicente lopez"]
-                    encontrado = False
-                    for barrio in barrios:
-                        if barrio in user_text.lower():
-                            for prop in propiedades_contexto:
-                                if (barrio in prop.get('neighborhood', '').lower() or 
-                                    barrio in prop.get('title', '').lower()):
-                                    propiedad_específica = prop
-                                    print(f"@ Detectada propiedad por barrio: {propiedad_específica.get('title')} - {propiedad_específica}")
-                                    encontrado = True
-                                    break
-                            if encontrado:
-                                break
-
-                # 3. Detectar por TIPO específico
-                if not propiedad_especifica:
-                    tipos = ["departamento", "casa", "ph", "terreno"]
-                    for tipo in tipos:
-                        if tipo in user_text.lower():
-                            for prop in propiedades_contexto:
-                                if tipo in prop.get('tipo', '').lower():
-                                    propiedad_especifica = prop
-                                    print(f"🎯 Detectada propiedad por tipo: {propiedad_especifica.get('title')} - {propiedad_especifica.get('tipo')}")
-                                    break
-                            if propiedad_especifica:
-                                break
-
-                # 4. Detectar por NÚMERO (primero, segundo, etc.)
-                if not propiedad_especifica:
-                    if any(word in user_text.lower() for word in ['primero', 'primera', '1']):
-                        propiedad_especifica = propiedades_contexto[0]
-                        print(f"🎯 Detectada primera propiedad: {propiedad_especifica.get('title')}")
-                    elif any(word in user_text.lower() for word in ['segundo', 'segunda', '2']) and len(propiedades_contexto) > 1:
-                        propiedad_especifica = propiedades_contexto[1]
-                        print(f"🎯 Detectada segunda propiedad: {propiedad_especifica.get('title')}")
-                    elif any(word in user_text.lower() for word in ['tercero', 'tercera', '3']) and len(propiedades_contexto) > 2:
-                        propiedad_especifica = propiedades_contexto[2]
-                        print(f"🎯 Detectada tercera propiedad: {propiedad_especifica.get('title')}")
-
-                # 5. Si no se detecta específicamente, usar la primera del contexto
-                if not propiedad_especifica and propiedades_contexto:
-                    propiedad_especifica = propiedades_contexto[0]
-                    print(f"🎯 Usando primera propiedad por defecto: {propiedad_especifica.get('title')}")
-                
-                property_details = propiedad_especifica
-                print(f"🏠 Propiedad seleccionada: {property_details.get('title', 'N/A')}")
-                
-            
-        # PRIORIDAD 2: Si no hay contexto, usar detección por palabras clave MEJORADA
-        elif any(keyword in text_lower for keyword in [
-            "más información", "mas informacion", "más detalles", "mas detalles", 
-            "brindar", "dime más", "cuéntame más", "información del", "detalles del",
-            "primero", "primera", "este", "esta", "ese", "esa", "el de", "la de"
-        ]):
-            print("🔍 Detectado seguimiento por palabras clave - CON DETECCIÓN MEJORADA")
-            
-            # Si hay contexto anterior, usarlo directamente
-            if contexto_anterior and contexto_anterior.get('resultados'):
-                propiedades_contexto = contexto_anterior['resultados']              
-                if propiedades_contexto:
-                    # DETECTAR QUÉ PROPIEDAD ESPECÍFICA QUIERE
-                    propiedad_especifica = None
-                    import re
-                    
-                    # 🔥🔥🔥 NUEVO: 0. DETECCIÓN POR AMBIENTES ESPECÍFICOS (PRIMERA PRIORIDAD)
-                    filters_ambientes = detectar_ambientes_especificos_seguimiento(text_lower)
-                    if "min_rooms" in filters_ambientes:
-                        ambientes_solicitados = filters_ambientes["min_rooms"]
-                        print(f"🎯 FILTRANDO por {ambientes_solicitados} ambientes específicos")
-                        
-                        # Filtrar propiedades que tengan exactamente esos ambientes
-                        propiedades_filtradas = [
-                            prop for prop in propiedades_contexto 
-                            if prop.get('rooms') == ambientes_solicitados
-                        ]
-                        
-                        if propiedades_filtradas:
-                            propiedad_especifica = propiedades_filtradas[0]
-                            print(f"✅ Encontrada propiedad con {ambientes_solicitados} ambientes: {propiedad_especifica.get('title')}")
-                        else:
-                            print(f"❌ No hay propiedades con {ambientes_solicitados} ambientes en el contexto")
-                    
-                    # 1. Detectar por PRECIO específico
-                    if not propiedad_especifica:
-                        precio_pattern = r'(?:\$?\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(?:mil|mil|k|K)?'
-                        match_precio = re.search(precio_pattern, user_text)
-                        print(f"🔍 DEBUG Precio - Match: {match_precio}")
-                        
-                        if match_precio:
-                            precio_texto = match_precio.group(1).replace('.', '').replace(',', '')
-                            print(f"🔍 DEBUG Precio - Texto: {precio_texto}")
-                            
-                            try:
-                                precio_buscado = int(precio_texto)
-                                print(f"🎯 Precio detectado en consulta: ${precio_buscado}")
-                                
-                                for prop in propiedades_contexto:
-                                    print(f"🔍 DEBUG - Comparando: {prop.get('title')} - ${prop.get('price')}")
-                                    if prop.get('price') == precio_buscado:
-                                        propiedad_especifica = prop
-                                        print(f"🎯 Detectada propiedad por precio: {propiedad_especifica.get('title')} - ${propiedad_especifica.get('price')}")
-                                        break
-                            except ValueError as e:
-                                print(f"⚠️ No se pudo convertir el precio detectado: {e}")
-                    
-                    # 2. Detectar por BARRIO específico
-                    if not propiedad_especifica:
-                        barrios = ["colegiales", "palermo", "soho","boedo", "belgrano", "recoleta", "almagro", "villa crespo", "san isidro", "vicente lopez"]
-                        for barrio in barrios:
-                            if barrio in user_text.lower():
-                                for prop in propiedades_contexto:
-                                    if (barrio in prop.get('neighborhood', '').lower() or 
-                                        barrio in prop.get('title', '').lower()):
-                                        propiedad_especifica = prop
-                                        print(f"🎯 Detectada propiedad por barrio: {propiedad_especifica.get('title')} - {propiedad_especifica.get('neighborhood')}")
-                                        break
-                                if propiedad_especifica:
-                                    break
-
-                    # 3. Detectar por TIPO específico
-                    if not propiedad_especifica:
-                        tipos = ["departamento", "casa", "ph", "terreno"]
-                        for tipo in tipos:
-                            if tipo in user_text.lower():
-                                for prop in propiedades_contexto:
-                                    if tipo in prop.get('tipo', '').lower():
-                                        propiedad_especifica = prop
-                                        print(f"🎯 Detectada propiedad por tipo: {propiedad_especifica.get('title')} - {propiedad_especifica.get('tipo')}")
-                                        break
-                                if propiedad_especifica:
-                                    break
-
-                    # 4. Detectar por NÚMERO (primero, segundo, etc.)
-                    if not propiedad_especifica:
-                        if any(word in user_text.lower() for word in ['primero', 'primera', '1']):
-                            propiedad_especifica = propiedades_contexto[0]
-                            print(f"🎯 Detectada primera propiedad: {propiedad_especifica.get('title')}")
-                        elif any(word in user_text.lower() for word in ['segundo', 'segunda', '2']) and len(propiedades_contexto) > 1:
-                            propiedad_especifica = propiedades_contexto[1]
-                            print(f"🎯 Detectada segunda propiedad: {propiedad_especifica.get('title')}")
-                        elif any(word in user_text.lower() for word in ['tercero', 'tercera', '3']) and len(propiedades_contexto) > 2:
-                            propiedad_especifica = propiedades_contexto[2]
-                            print(f"🎯 Detectada tercera propiedad: {propiedad_especifica.get('title')}")
-
-                    # 5. Si no se detecta específicamente, usar la primera del contexto
-                    if not propiedad_especifica and propiedades_contexto:
-                        propiedad_especifica = propiedades_contexto[0]
-                        print(f"🎯 Usando primera propiedad por defecto: {propiedad_especifica.get('title')}")
-                    
-                    property_details = propiedad_especifica
-                    print(f"🏠 Propiedad desde contexto: {property_details.get('title', 'N/A')}")       
-            else:
-                # Try to find the property from the conversation history
-                if historial:
-                    last_bot_response = get_last_bot_response(channel)
-                    if last_bot_response:
-                        # Extract property title from last bot response
-                        match = re.search(r"\* \*\*(.*?):\*\*", last_bot_response)
-                        if match:
-                            property_title = match.group(1)
-                            # Get property details from the database
-                            conn = sqlite3.connect(DB_PATH)
-                            conn.row_factory = sqlite3.Row
-                            cur = conn.cursor()
-                            cur.execute("SELECT * FROM properties WHERE title = ?", (property_title,))
-                            row = cur.fetchone()
-                            if row:
-                                property_details = dict(row)
-                            conn.close()
+        # Cargar datos de propiedades desde JSON
+        propiedades_json = cargar_propiedades_json("properties.json")
+        barrios_disponibles = extraer_barrios(propiedades_json)
+        tipos_disponibles = extraer_tipos(propiedades_json)
+        operaciones_disponibles = extraer_operaciones(propiedades_json)
         
-        
-        
-        
-        # 🔥 COMBINAR FILTROS: frontend + detección automática
-        
-        # 1. Agregar filtros del frontend si existen
-        
-        
-        
-# 🔥 COMBINAR FILTROS: frontend + detección automática
+        historial = get_historial_canal(channel)
+        contexto_historial = "\nHistorial reciente:\n" + "\n".join(f"- {m}" for m in historial) if historial else ""
 
-# 1. Agregar filtros del frontend si existen
+        contexto_dinamico = (
+            f"Barrios disponibles: {', '.join(barrios_disponibles)}.\n"
+            f"Tipos de propiedad: {', '.join(tipos_disponibles)}.\n"
+            f"Operaciones disponibles: {', '.join(operaciones_disponibles)}."
+        )
+
+        filters, results = {}, None
+        search_performed = False
+        property_details = None
+
+        # Palabras de seguimiento
+        palabras_seguimiento_backend = [
+            'más', 'mas', 'detalles', 'brindar', 'brindame', 'dime', 'cuéntame', 
+            'cuentame', 'información', 'informacion', 'características', 'caracteristicas',
+            'este', 'esta', 'ese', 'esa', 'primero', 'primera', 'segundo', 'segunda',
+            'propiedad', 'departamento', 'casa', 'ph', 'casaquinta', 'terreno', 'terrenos'
+        ]
+        
+        # Detección de seguimiento backend
+        es_seguimiento_backend = False
+        for palabra in palabras_seguimiento_backend:
+            if palabra in text_lower:
+                es_seguimiento_backend = True
+                break
+        
+        es_seguimiento_final = es_seguimiento or es_seguimiento_backend
+        
+        print(f"🔍 DEBUG - es_seguimiento: {es_seguimiento}")
+        print(f"🔍 DEBUG - es_seguimiento_backend: {es_seguimiento_backend}")
+        print(f"🔍 DEBUG - es_seguimiento_final: {es_seguimiento_final}")
+
+        # TODO: Resto del código del endpoint...
+        # (Aquí va todo el código que ya tienes, pero asegúrate de que
+        # text_lower ya está definido arriba)
+        
+        # 🔥 COMBINAR FILTROS
         if filters_from_frontend:
             filters.update(filters_from_frontend)
             print(f"🎯 Filtros aplicados desde frontend: {filters_from_frontend}")
 
-        # 2. Detectar filtros adicionales del texto
+        # 🔥 LLAMAR A detect_filters PASANDO text_lower
+        print(f"🔍 Llamando a detect_filters con text_lower='{text_lower}'")
         detected_filters = detect_filters(text_lower)
         if detected_filters:
             filters.update(detected_filters)
             print(f"🎯 Filtros detectados del texto: {detected_filters}")
 
-        # 🔥🔥🔥 CORRECCIÓN GENÉRICA PARA FILTROS ERRÓNEOS
+        # 🔥 VALIDACIÓN DE FILTROS (USA text_lower QUE YA EXISTE)
         print(f"🔍 VERIFICANDO FILTROS: {filters}")
-
-        # Verificar si el precio detectado es probablemente un error
         
-        # 🔥🔥🔥 CORRECCIÓN GENÉRICA PARA FILTROS ERRÓNEOS
-        print(f"🔍 VERIFICANDO FILTROS: {filters}")
-
-# Verificar si el precio detectado es probablemente un error
         if filters.get('max_price') and filters.get('min_rooms'):
             mismo_numero = filters['max_price'] == filters['min_rooms']
             precio_muy_bajo = filters['max_price'] < 1000
             texto_tiene_amb = any(palabra in text_lower for palabra in [' amb', 'ambientes', 'dorm'])
             texto_tiene_dolares = any(palabra in text_lower for palabra in ['usd', 'dólar', 'dolar', 'u$s'])
             
-            # Es error si: mismo número + precio bajo + contexto de ambientes + NO son dólares
             es_error = (mismo_numero and precio_muy_bajo and texto_tiene_amb and not texto_tiene_dolares)
             
             if es_error:
-                print(f"🛑 CORRECCIÓN: Precio ${filters['max_price']} es error (detectado como ambientes) - eliminando")
+                print(f"🛑 CORRECCIÓN: Precio ${filters['max_price']} es error - eliminando")
                 filters.pop('max_price', None)
 
-        # Si hay min_rooms pero no max_rooms, establecer ambos iguales
         if filters.get('min_rooms') and not filters.get('max_rooms'):
             filters['max_rooms'] = filters['min_rooms']
             print(f"🎯 Estableciendo max_rooms = min_rooms = {filters['min_rooms']}")
-        
 
-        
-        
-        
-        # Si hay filtros, realizar búsqueda
-        # 👇 EVITAR BÚSQUEDA SI HAY CONTEXTO DE SEGUIMIENTO
-        # 🔥 AGREGAR ESTO ANTES del primer uso de es_seguimiento_final
-            
-            print(f"🔍 DEBUG - es_seguimiento: {es_seguimiento}")
-            print(f"🔍 DEBUG - es_seguimiento_backend: {es_seguimiento_backend}")
-
-            # Solo entonces definir es_seguimiento_final
-            es_seguimiento_final = es_seguimiento or es_seguimiento_backend
-            print(f"🔍 DEBUG - es_seguimiento_final: {es_seguimiento_final}")
-            
-
-
-
-            if filters and not property_details and not (es_seguimiento_final and contexto_anterior):
-                print("🎯 Activando búsqueda con filtros combinados...")
-                search_performed = True
-                metrics.increment_searches()
-            
-                results = query_properties(filters)
-                print(f"📊 Resultados encontrados: {len(results)}")
-        else:
-            print("🔄 Modo seguimiento - usando contexto anterior")
-            # Usar el contexto anterior si está disponible
-            if contexto_anterior and contexto_anterior.get('resultados'):
-                results = contexto_anterior['resultados']
-                print(f"📋 Usando {len(results)} propiedades del contexto anterior")
-                search_performed = True
-        # Tono según canal
-        if channel == "whatsapp":
-            style_hint = "Respondé de forma breve, directa y cálida como si fuera un mensaje de WhatsApp."
-        else:
-            style_hint = "Respondé de forma explicativa, profesional y cálida como si fuera una consulta web."
-
-        # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
-         # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
-        
-        
-        
-        
-        if es_seguimiento_final and (contexto_anterior or property_details):
-            print("🎯 MODO SEGUIMIENTO ACTIVADO")
-            
-            # Si tenemos property_details (de contexto o detección), usar prompt específico
-            if property_details:
-                print(f"🎯 PROPIEDAD ESPECÍFICA: {property_details.get('title')}")
-                
-                detalles_propiedad = f"""
-        PROPIEDAD ESPECÍFICA:
-        - Título: {property_details.get('title', 'N/A')}
-        - Precio: ${property_details.get('price', 'N/A')}
-        - Barrio: {property_details.get('neighborhood', 'N/A')}
-        - Ambientes: {property_details.get('rooms', 'N/A')}
-        - Metros: {property_details.get('sqm', 'N/A')}m²
-        - Operación: {property_details.get('operacion', 'N/A')}
-        - Tipo: {property_details.get('tipo', 'N/A')}
-        - Descripción: {property_details.get('description', 'N/A')}
-        - Dirección: {property_details.get('direccion', 'N/A')}
-        - Antigüedad: {property_details.get('antiguedad', 'N/A')}
-        - Amenities: {property_details.get('amenities', 'N/A')}
-        - Cochera: {property_details.get('cochera', 'N/A')}
-        - Balcón: {property_details.get('balcon', 'N/A')}
-        - Aire acondicionado: {property_details.get('aire_acondicionado', 'N/A')}
-        - Expensas: {property_details.get('expensas', 'N/A')}
-        - Estado: {property_details.get('estado', 'N/A')}
-        """
-                
-                prompt = f"""
-        ERES UN ASISTENTE INMOBILIARIO. El usuario está preguntando específicamente sobre ESTA propiedad:
-
-        {detalles_propiedad}
-
-        PREGUNTA DEL USUARIO: "{user_text}"
-
-        INSTRUCCIONES ESTRICTAS:
-        1. Responde EXCLUSIVAMENTE sobre esta propiedad específica
-        2. Proporciona TODOS los detalles disponibles listados arriba
-        3. NO menciones otras propiedades
-        4. NO hagas preguntas adicionales al usuario
-        5. Si faltan datos, menciona "No disponible" para ese campo
-        6. {style_hint}
-
-        RESPONDE DIRECTAMENTE CON TODOS LOS DETALLES DE ESTA PROPIEDAD:
-        """
-                print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
-            
-            else:
-                # Si no hay property_details pero hay contexto, usar prompt normal
-                prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
-                print("🧠 Prompt normal enviado a Gemini")
-
-        # 👇 SI NO ES SEGUIMIENTO, USAR PROMPT NORMAL
-        else:
-            prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
-            print("🧠 Prompt normal enviado a Gemini (no es seguimiento)")
-            
-        metrics.increment_gemini_calls()
-        answer = call_gemini_with_rotation(prompt)
-        
-        response_time = time.time() - start_time
-        log_conversation(user_text, answer, channel, response_time, search_performed, len(results) if results else 0)
-        metrics.increment_success()
+        # Continúa con el resto de tu lógica...
+        # (búsqueda, gemini, etc.)
         
         return ChatResponse(
-            response=answer,
-            results_count=len(results) if results else None,
-            search_performed=search_performed,
-            # 👇 AGREGAR PROPIEDADES A LA RESPUESTA
-            propiedades=results if results else (contexto_anterior.get('resultados') if contexto_anterior else None)
-        )
-    
-    except HTTPException:
-        metrics.increment_failures()
-        raise
-    except Exception as e:
-        metrics.increment_failures()
-        # 🔥 MANEJO DE ERRORES MÁS LIMPIO
-        error_type = type(e).__name__
-        print(f"❌ ERROR en endpoint /chat: {error_type}: {str(e)}")
-        
-        # Respuesta amigable al usuario
-        error_message = "⚠️ Ocurrió un error procesando tu consulta. Por favor, intentá nuevamente en unos momentos."
-        
-        return ChatResponse(
-            response=error_message,
+            response="Respuesta temporal de debug",
+            results_count=0,
             search_performed=False,
             propiedades=None
         )
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ ERROR COMPLETO:")
+        print(traceback.format_exc())
+        metrics.increment_failures()
+        return ChatResponse(
+            response="Error procesando consulta",
+            search_performed=False,
+            propiedades=None
+        )
+
+
+
+
+# @app.post("/chat", response_model=ChatResponse)
+# async def chat(request: ChatRequest):
+
+#     metrics.total_requests += 1
+
+#     es_seguimiento = request.es_seguimiento
+#     filtros_actuales = request.filtros_actuales or {}
+    
+#     print(f"CONTEXTO - Es seguimiento: {es_seguimiento}")
+    
+#     # Inicialización defensiva de variables
+#     # --- LA CORRECCIÓN ES ESTA LÍNEA ---
+#     # Aseguramos que text_lower siempre exista para el cache más abajo
+#     text_lower = request.query.lower().strip() 
+    
+#     response_text = ""
+#     filtros_nuevos = None
+#     source = "LLM" # default
+
+#     # try:
+#     #     # 2. PROCESAMIENTO INICIAL (Cache y pre-chequeos)
+#     #     if not es_seguimiento:
+#     #         # Chequeo para limpiar cache
+#     #         if "limpiar cache" in text_lower or "reiniciar cache" in text_lower:
+# # ... el resto del código continúa aquí
+
+
+
+
+
+
+
+
+#     """Endpoint principal para chat con el asistente inmobiliario"""
+#     start_time = time.time()
+#     metrics.increment_requests()
+    
+#     try:
+#         if not es_seguimiento:
+#         # Chequeo para limpiar cache
+#             if "limpiar cache" in text_lower or "reiniciar cache" in text_lower:
+# # ... el resto del código continúa aquí        user_text = request.message.strip()
+#                 channel = request.channel.strip()
+#                 filters_from_frontend = request.filters if request.filters else {}
+
+#         # 👇 AGREGAR DETECCIÓN DE CONTEXTO
+#         contexto_anterior = request.contexto_anterior if hasattr(request, 'contexto_anterior') else None
+#         es_seguimiento = request.es_seguimiento if hasattr(request, 'es_seguimiento') else False
+
+#         if not user_text:
+#             raise HTTPException(status_code=400, detail="El mensaje no puede estar vacío")
+
+#             # 🔥🔥🔥 AGREGAR ESTOS PRINTS DEBUG NUEVOS AQUÍ 🔥🔥🔥
+#         print(f"🔍 DEBUG - user_text: '{user_text}'")
+#         print(f"🔍 DEBUG - es_seguimiento: {es_seguimiento}")
+#         print(f"🔍 DEBUG - contexto_anterior existe: {contexto_anterior is not None}")
+#         if contexto_anterior:
+#             print(f"🔍 DEBUG - resultados en contexto: {len(contexto_anterior.get('resultados', []))}")
+#             if contexto_anterior.get('resultados'):
+#                 primera_prop = contexto_anterior['resultados'][0]
+#                 print(f"🔍 DEBUG - primera propiedad en contexto: {primera_prop.get('title')} - {primera_prop.get('rooms')} amb")
+#         else:
+#             print(f"🔍 DEBUG - NO hay contexto_anterior")
+
+#             # 👇 TUS PRINTS ACTUALES SE MANTIENEN
+#             print(f"📥 Mensaje recibido: {user_text}")
+#             print(f"📱 Canal: {channel}")
+#             print(f"🎯 Filtros del frontend: {filters_from_frontend}")
+#             # 👇 AGREGAR LOGS DE CONTEXTO
+#             print(f"🔍 CONTEXTO - Es seguimiento: {es_seguimiento}")
+#             if contexto_anterior:
+#                 print(f"📋 Contexto anterior: {len(contexto_anterior.get('resultados', []))} propiedades")
+#                 if contexto_anterior.get('resultados'):
+#                     primera_propiedad = contexto_anterior['resultados'][0]
+#                     print(f"🏠 Propiedad en contexto: {primera_propiedad.get('title', 'N/A')} - ${primera_propiedad.get('price', 'N/A')}")
+#                     # Cargar datos de propiedades desde JSON
+#                     propiedades_json = cargar_propiedades_json("properties.json")
+#                     barrios_disponibles = extraer_barrios(propiedades_json)
+#                     tipos_disponibles = extraer_tipos(propiedades_json)
+#                     operaciones_disponibles = extraer_operaciones(propiedades_json)
+                    
+#                     historial = get_historial_canal(channel)
+#                     contexto_historial = "\nHistorial reciente:\n" + "\n".join(f"- {m}" for m in historial) if historial else ""
+
+#                     contexto_dinamico = (
+#                         f"Barrios disponibles: {', '.join(barrios_disponibles)}.\n"
+#                         f"Tipos de propiedad: {', '.join(tipos_disponibles)}.\n"
+#                         f"Operaciones disponibles: {', '.join(operaciones_disponibles)}."
+#                     )
+
+#                     text_lower = user_text.lower()
+#                     filters, results = {}, None
+#                     search_performed = False
+#                     property_details = None
+
+#                     # 👇 AGREGAR DETECCIÓN MEJORADA DE SEGUIMIENTO
+#                     palabras_seguimiento_backend = [
+#                         'más', 'mas', 'detalles', 'brindar', 'brindame', 'dime', 'cuéntame', 
+#                         'cuentame', 'información', 'informacion', 'características', 'caracteristicas',
+#                         'este', 'esta', 'ese', 'esa', 'primero', 'primera', 'segundo', 'segunda',
+#                         'propiedad', 'departamento', 'casa', 'ph', 'casaquinta', 'terreno', 'terrenos'
+#                     ]
+                    
+#                     # 🔥🔥🔥 AGREGAR LA SOLUCIÓN TEMPORAL GENÉRICA JUSTO AQUÍ 🔥🔥🔥
+#                     import re
+
+#                     # Buscar cualquier número de ambientes en el texto
+#                     ambientes_match = re.search(r'(\d+)\s*amb', user_text.lower())
+#                     if ambientes_match:
+#                         ambientes_solicitados = int(ambientes_match.group(1))
+#                         print(f"🎯 DETECCIÓN DIRECTA TEMPORAL: Usuario pide {ambientes_solicitados} ambientes")
+                        
+#                         # Buscar en los resultados actuales
+#                         if results:
+#                             propiedades_filtradas = [prop for prop in results if prop.get('rooms') == ambientes_solicitados]
+#                             if propiedades_filtradas:
+#                                 property_details = propiedades_filtradas[0]
+#                                 print(f"✅ Propiedad de {ambientes_solicitados} ambientes encontrada en results: {property_details.get('title')}")
+                        
+#                         # Buscar en el contexto anterior
+#                         elif contexto_anterior and contexto_anterior.get('resultados'):
+#                             propiedades_filtradas = [prop for prop in contexto_anterior['resultados'] if prop.get('rooms') == ambientes_solicitados]
+#                             if propiedades_filtradas:
+#                                 property_details = propiedades_filtradas[0]
+#                                 print(f"✅ Propiedad de {ambientes_solicitados} ambientes encontrada en contexto: {property_details.get('title')}")
+                        
+#                         if property_details:
+#                             print(f"✅ USANDO propiedad de {ambientes_solicitados} ambientes: {property_details.get('title')}")
+                             
+#                     es_seguimiento_backend = False
+#                     for palabra in palabras_seguimiento_backend:
+#                         if palabra in text_lower:
+#                             es_seguimiento_backend = True
+#                             break
+                    
+                   
+
+#                     # COMBINAR: seguimiento del frontend + detección backend
+#                     es_seguimiento_final = es_seguimiento or es_seguimiento_backend
+
+#                     print(f"🔍 CONTEXTO - Es seguimiento frontend: {es_seguimiento}")
+#                     print(f"🔍 CONTEXTO - Es seguimiento backend: {es_seguimiento_backend}")
+#                     print(f"🔍 CONTEXTO - Es seguimiento FINAL: {es_seguimiento_final}")
+
+#                     if contexto_anterior:
+#                         print(f"📋 Contexto anterior recibido: {len(contexto_anterior.get('resultados', []))} propiedades")
+#                         if contexto_anterior.get('resultados'):
+#                             primera_propiedad = contexto_anterior['resultados'][0]
+#                             print(f"🏠 Propiedad en contexto: {primera_propiedad.get('title', 'N/A')} - ${primera_propiedad.get('price', 'N/A')}")
+                    
+#         # 👇 DETECCIÓN MEJORADA DE SEGUIMIENTO (usa contexto o historial)
+        
+#         # PRIORIDAD 1: Usar contexto del frontend si está disponible
+
+
+
+#         if es_seguimiento and contexto_anterior and contexto_anterior.get('resultados'):
+#             print("🎯 Usando contexto del frontend para seguimiento - CON DETECCIÓN MEJORADA")
+#             propiedades_contexto = contexto_anterior['resultados']
+#             if propiedades_contexto:
+#                 # 🔥 REEMPLAZAR CON LÓGICA DE DETECCIÓN INTELIGENTE:
+#                 propiedad_especifica = None
+                
+#                 # 🔥🔥🔥 NUEVO: 0. DETECCIÓN POR AMBIENTES ESPECÍFICOS (PRIMERA PRIORIDAD)
+#                 filters_ambientes = detectar_ambientes_especificos_seguimiento(text_lower)
+#                 if "min_rooms" in filters_ambientes:
+#                     ambientes_solicitados = filters_ambientes["min_rooms"]
+#                     print(f"🎯 FILTRANDO por {ambientes_solicitados} ambientes específicos")
+                    
+#                     # Filtrar propiedades que tengan exactamente esos ambientes
+#                     propiedades_filtradas = [
+#                         prop for prop in propiedades_contexto 
+#                         if prop.get('rooms') == ambientes_solicitados
+#                     ]
+                    
+#                     if propiedades_filtradas:
+#                         propiedad_especifica = propiedades_filtradas[0]
+#                         print(f"✅ Encontrada propiedad con {ambientes_solicitados} ambientes: {propiedad_especifica.get('title')}")
+#                     else:
+#                         print(f"❌ No hay propiedades con {ambientes_solicitados} ambientes en el contexto")
+                
+#                 # 1. Detectar por PRECIO específico
+#                 if not propiedad_especifica:
+#                     import re
+#                     precio_pattern = r'(?:\$?\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(?:mil|mil|k|K)?'
+#                     match_precio = re.search(precio_pattern, user_text)
+#                     print(f"🔍 DEBUG Precio - Match: {match_precio}")
+#                     print(f"🔍 DEBUG Precio - Texto original: '{user_text}'")
+                    
+#                     if match_precio:
+#                         precio_texto = match_precio.group(1)
+#                         print(f"🔍 DEBUG Precio - Texto capturado: '{precio_texto}'")
+                        
+#                         precio_limpio = precio_texto.replace('.', '').replace(',', '')
+#                         print(f"🔍 DEBUG Precio - Texto limpio: '{precio_limpio}'")
+                        
+#                         try:
+#                             precio_buscado = int(precio_limpio)
+#                             print(f"🎯 Precio detectado en consulta: ${precio_buscado}")
+                            
+#                             for prop in propiedades_contexto:
+#                                 print(f"🔍 DEBUG - Comparando: {prop.get('title')} - ${prop.get('price')}")
+#                                 if prop.get('price') == precio_buscado:
+#                                     propiedad_especifica = prop
+#                                     print(f"🎯 Detectada propiedad por precio: {propiedad_especifica.get('title')} - ${propiedad_especifica.get('price')}")
+#                                     break
+#                             if not propiedad_especifica:
+#                                 print(f"⚠️ No se encontró propiedad con precio ${precio_buscado}")
+#                         except ValueError as e:
+#                             print(f"⚠️ No se pudo convertir el precio detectado: {e}")
+                    
+#                 # 2. Detectar por BARRIO específico
+#                 if not propiedad_especifica:
+#                     barrios = ["colegiales", "palermo", "boedo", "belgrano", "recoleta", "soho","almagro", "villa crespo", "san isidro", "vicente lopez"]
+#                     encontrado = False
+#                     for barrio in barrios:
+#                         if barrio in user_text.lower():
+#                             for prop in propiedades_contexto:
+#                                 if (barrio in prop.get('neighborhood', '').lower() or 
+#                                     barrio in prop.get('title', '').lower()):
+#                                     propiedad_específica = prop
+#                                     print(f"@ Detectada propiedad por barrio: {propiedad_específica.get('title')} - {propiedad_específica}")
+#                                     encontrado = True
+#                                     break
+#                             if encontrado:
+#                                 break
+
+#                 # 3. Detectar por TIPO específico
+#                 if not propiedad_especifica:
+#                     tipos = ["departamento", "casa", "ph", "terreno"]
+#                     for tipo in tipos:
+#                         if tipo in user_text.lower():
+#                             for prop in propiedades_contexto:
+#                                 if tipo in prop.get('tipo', '').lower():
+#                                     propiedad_especifica = prop
+#                                     print(f"🎯 Detectada propiedad por tipo: {propiedad_especifica.get('title')} - {propiedad_especifica.get('tipo')}")
+#                                     break
+#                             if propiedad_especifica:
+#                                 break
+
+#                 # 4. Detectar por NÚMERO (primero, segundo, etc.)
+#                 if not propiedad_especifica:
+#                     if any(word in user_text.lower() for word in ['primero', 'primera', '1']):
+#                         propiedad_especifica = propiedades_contexto[0]
+#                         print(f"🎯 Detectada primera propiedad: {propiedad_especifica.get('title')}")
+#                     elif any(word in user_text.lower() for word in ['segundo', 'segunda', '2']) and len(propiedades_contexto) > 1:
+#                         propiedad_especifica = propiedades_contexto[1]
+#                         print(f"🎯 Detectada segunda propiedad: {propiedad_especifica.get('title')}")
+#                     elif any(word in user_text.lower() for word in ['tercero', 'tercera', '3']) and len(propiedades_contexto) > 2:
+#                         propiedad_especifica = propiedades_contexto[2]
+#                         print(f"🎯 Detectada tercera propiedad: {propiedad_especifica.get('title')}")
+
+#                 # 5. Si no se detecta específicamente, usar la primera del contexto
+#                 if not propiedad_especifica and propiedades_contexto:
+#                     propiedad_especifica = propiedades_contexto[0]
+#                     print(f"🎯 Usando primera propiedad por defecto: {propiedad_especifica.get('title')}")
+                
+#                 property_details = propiedad_especifica
+#                 print(f"🏠 Propiedad seleccionada: {property_details.get('title', 'N/A')}")
+                
+            
+#         # PRIORIDAD 2: Si no hay contexto, usar detección por palabras clave MEJORADA
+#         elif any(keyword in text_lower for keyword in [
+#             "más información", "mas informacion", "más detalles", "mas detalles", 
+#             "brindar", "dime más", "cuéntame más", "información del", "detalles del",
+#             "primero", "primera", "este", "esta", "ese", "esa", "el de", "la de"
+#         ]):
+#             print("🔍 Detectado seguimiento por palabras clave - CON DETECCIÓN MEJORADA")
+            
+#             # Si hay contexto anterior, usarlo directamente
+#             if contexto_anterior and contexto_anterior.get('resultados'):
+#                 propiedades_contexto = contexto_anterior['resultados']              
+#                 if propiedades_contexto:
+#                     # DETECTAR QUÉ PROPIEDAD ESPECÍFICA QUIERE
+#                     propiedad_especifica = None
+#                     import re
+                    
+#                     # 🔥🔥🔥 NUEVO: 0. DETECCIÓN POR AMBIENTES ESPECÍFICOS (PRIMERA PRIORIDAD)
+#                     filters_ambientes = detectar_ambientes_especificos_seguimiento(text_lower)
+#                     if "min_rooms" in filters_ambientes:
+#                         ambientes_solicitados = filters_ambientes["min_rooms"]
+#                         print(f"🎯 FILTRANDO por {ambientes_solicitados} ambientes específicos")
+                        
+#                         # Filtrar propiedades que tengan exactamente esos ambientes
+#                         propiedades_filtradas = [
+#                             prop for prop in propiedades_contexto 
+#                             if prop.get('rooms') == ambientes_solicitados
+#                         ]
+                        
+#                         if propiedades_filtradas:
+#                             propiedad_especifica = propiedades_filtradas[0]
+#                             print(f"✅ Encontrada propiedad con {ambientes_solicitados} ambientes: {propiedad_especifica.get('title')}")
+#                         else:
+#                             print(f"❌ No hay propiedades con {ambientes_solicitados} ambientes en el contexto")
+                    
+#                     # 1. Detectar por PRECIO específico
+#                     if not propiedad_especifica:
+#                         precio_pattern = r'(?:\$?\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(?:mil|mil|k|K)?'
+#                         match_precio = re.search(precio_pattern, user_text)
+#                         print(f"🔍 DEBUG Precio - Match: {match_precio}")
+                        
+#                         if match_precio:
+#                             precio_texto = match_precio.group(1).replace('.', '').replace(',', '')
+#                             print(f"🔍 DEBUG Precio - Texto: {precio_texto}")
+                            
+#                             try:
+#                                 precio_buscado = int(precio_texto)
+#                                 print(f"🎯 Precio detectado en consulta: ${precio_buscado}")
+                                
+#                                 for prop in propiedades_contexto:
+#                                     print(f"🔍 DEBUG - Comparando: {prop.get('title')} - ${prop.get('price')}")
+#                                     if prop.get('price') == precio_buscado:
+#                                         propiedad_especifica = prop
+#                                         print(f"🎯 Detectada propiedad por precio: {propiedad_especifica.get('title')} - ${propiedad_especifica.get('price')}")
+#                                         break
+#                             except ValueError as e:
+#                                 print(f"⚠️ No se pudo convertir el precio detectado: {e}")
+                    
+#                     # 2. Detectar por BARRIO específico
+#                     if not propiedad_especifica:
+#                         barrios = ["colegiales", "palermo", "soho","boedo", "belgrano", "recoleta", "almagro", "villa crespo", "san isidro", "vicente lopez"]
+#                         for barrio in barrios:
+#                             if barrio in user_text.lower():
+#                                 for prop in propiedades_contexto:
+#                                     if (barrio in prop.get('neighborhood', '').lower() or 
+#                                         barrio in prop.get('title', '').lower()):
+#                                         propiedad_especifica = prop
+#                                         print(f"🎯 Detectada propiedad por barrio: {propiedad_especifica.get('title')} - {propiedad_especifica.get('neighborhood')}")
+#                                         break
+#                                 if propiedad_especifica:
+#                                     break
+
+#                     # 3. Detectar por TIPO específico
+#                     if not propiedad_especifica:
+#                         tipos = ["departamento", "casa", "ph", "terreno"]
+#                         for tipo in tipos:
+#                             if tipo in user_text.lower():
+#                                 for prop in propiedades_contexto:
+#                                     if tipo in prop.get('tipo', '').lower():
+#                                         propiedad_especifica = prop
+#                                         print(f"🎯 Detectada propiedad por tipo: {propiedad_especifica.get('title')} - {propiedad_especifica.get('tipo')}")
+#                                         break
+#                                 if propiedad_especifica:
+#                                     break
+
+#                     # 4. Detectar por NÚMERO (primero, segundo, etc.)
+#                     if not propiedad_especifica:
+#                         if any(word in user_text.lower() for word in ['primero', 'primera', '1']):
+#                             propiedad_especifica = propiedades_contexto[0]
+#                             print(f"🎯 Detectada primera propiedad: {propiedad_especifica.get('title')}")
+#                         elif any(word in user_text.lower() for word in ['segundo', 'segunda', '2']) and len(propiedades_contexto) > 1:
+#                             propiedad_especifica = propiedades_contexto[1]
+#                             print(f"🎯 Detectada segunda propiedad: {propiedad_especifica.get('title')}")
+#                         elif any(word in user_text.lower() for word in ['tercero', 'tercera', '3']) and len(propiedades_contexto) > 2:
+#                             propiedad_especifica = propiedades_contexto[2]
+#                             print(f"🎯 Detectada tercera propiedad: {propiedad_especifica.get('title')}")
+
+#                     # 5. Si no se detecta específicamente, usar la primera del contexto
+#                     if not propiedad_especifica and propiedades_contexto:
+#                         propiedad_especifica = propiedades_contexto[0]
+#                         print(f"🎯 Usando primera propiedad por defecto: {propiedad_especifica.get('title')}")
+                    
+#                     property_details = propiedad_especifica
+#                     print(f"🏠 Propiedad desde contexto: {property_details.get('title', 'N/A')}")       
+#             else:
+#                 # Try to find the property from the conversation history
+#                 if historial:
+#                     last_bot_response = get_last_bot_response(channel)
+#                     if last_bot_response:
+#                         # Extract property title from last bot response
+#                         match = re.search(r"\* \*\*(.*?):\*\*", last_bot_response)
+#                         if match:
+#                             property_title = match.group(1)
+#                             # Get property details from the database
+#                             conn = sqlite3.connect(DB_PATH)
+#                             conn.row_factory = sqlite3.Row
+#                             cur = conn.cursor()
+#                             cur.execute("SELECT * FROM properties WHERE title = ?", (property_title,))
+#                             row = cur.fetchone()
+#                             if row:
+#                                 property_details = dict(row)
+#                             conn.close()
+        
+        
+        
+        
+#         # 🔥 COMBINAR FILTROS: frontend + detección automática
+        
+#         # 1. Agregar filtros del frontend si existen
+        
+        
+        
+# # 🔥 COMBINAR FILTROS: frontend + detección automática
+
+# # 1. Agregar filtros del frontend si existen
+#         if filters_from_frontend:
+#             filters.update(filters_from_frontend)
+#             print(f"🎯 Filtros aplicados desde frontend: {filters_from_frontend}")
+
+#         # 2. Detectar filtros adicionales del texto
+#         detected_filters = detect_filters(text_lower)
+#         if detected_filters:
+#             filters.update(detected_filters)
+#             print(f"🎯 Filtros detectados del texto: {detected_filters}")
+
+#         # 🔥🔥🔥 CORRECCIÓN GENÉRICA PARA FILTROS ERRÓNEOS
+#         print(f"🔍 VERIFICANDO FILTROS: {filters}")
+
+#         # Verificar si el precio detectado es probablemente un error
+        
+#         # 🔥🔥🔥 CORRECCIÓN GENÉRICA PARA FILTROS ERRÓNEOS
+#         print(f"🔍 VERIFICANDO FILTROS: {filters}")
+
+# # Verificar si el precio detectado es probablemente un error
+#         if filters.get('max_price') and filters.get('min_rooms'):
+#             mismo_numero = filters['max_price'] == filters['min_rooms']
+#             precio_muy_bajo = filters['max_price'] < 1000
+#             texto_tiene_amb = any(palabra in text_lower for palabra in [' amb', 'ambientes', 'dorm'])
+#             texto_tiene_dolares = any(palabra in text_lower for palabra in ['usd', 'dólar', 'dolar', 'u$s'])
+            
+#             # Es error si: mismo número + precio bajo + contexto de ambientes + NO son dólares
+#             es_error = (mismo_numero and precio_muy_bajo and texto_tiene_amb and not texto_tiene_dolares)
+            
+#             if es_error:
+#                 print(f"🛑 CORRECCIÓN: Precio ${filters['max_price']} es error (detectado como ambientes) - eliminando")
+#                 filters.pop('max_price', None)
+
+#         # Si hay min_rooms pero no max_rooms, establecer ambos iguales
+#         if filters.get('min_rooms') and not filters.get('max_rooms'):
+#             filters['max_rooms'] = filters['min_rooms']
+#             print(f"🎯 Estableciendo max_rooms = min_rooms = {filters['min_rooms']}")
+        
+
+        
+        
+        
+#         # Si hay filtros, realizar búsqueda
+#         # 👇 EVITAR BÚSQUEDA SI HAY CONTEXTO DE SEGUIMIENTO
+#         # 🔥 AGREGAR ESTO ANTES del primer uso de es_seguimiento_final
+            
+#             print(f"🔍 DEBUG - es_seguimiento: {es_seguimiento}")
+#             print(f"🔍 DEBUG - es_seguimiento_backend: {es_seguimiento_backend}")
+
+#             # Solo entonces definir es_seguimiento_final
+#             es_seguimiento_final = es_seguimiento or es_seguimiento_backend
+#             print(f"🔍 DEBUG - es_seguimiento_final: {es_seguimiento_final}")
+            
+
+
+
+#             if filters and not property_details and not (es_seguimiento_final and contexto_anterior):
+#                 print("🎯 Activando búsqueda con filtros combinados...")
+#                 search_performed = True
+#                 metrics.increment_searches()
+            
+#                 results = query_properties(filters)
+#                 print(f"📊 Resultados encontrados: {len(results)}")
+#         else:
+#             print("🔄 Modo seguimiento - usando contexto anterior")
+#             # Usar el contexto anterior si está disponible
+#             if contexto_anterior and contexto_anterior.get('resultados'):
+#                 results = contexto_anterior['resultados']
+#                 print(f"📋 Usando {len(results)} propiedades del contexto anterior")
+#                 search_performed = True
+#         # Tono según canal
+#         if channel == "whatsapp":
+#             style_hint = "Respondé de forma breve, directa y cálida como si fuera un mensaje de WhatsApp."
+#         else:
+#             style_hint = "Respondé de forma explicativa, profesional y cálida como si fuera una consulta web."
+
+#         # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
+#          # 👇 AGREGAR PROMPT ESPECÍFICO PARA SEGUIMIENTO
+        
+        
+        
+        
+#         if es_seguimiento_final and (contexto_anterior or property_details):
+#             print("🎯 MODO SEGUIMIENTO ACTIVADO")
+            
+#             # Si tenemos property_details (de contexto o detección), usar prompt específico
+#             if property_details:
+#                 print(f"🎯 PROPIEDAD ESPECÍFICA: {property_details.get('title')}")
+                
+#                 detalles_propiedad = f"""
+#         PROPIEDAD ESPECÍFICA:
+#         - Título: {property_details.get('title', 'N/A')}
+#         - Precio: ${property_details.get('price', 'N/A')}
+#         - Barrio: {property_details.get('neighborhood', 'N/A')}
+#         - Ambientes: {property_details.get('rooms', 'N/A')}
+#         - Metros: {property_details.get('sqm', 'N/A')}m²
+#         - Operación: {property_details.get('operacion', 'N/A')}
+#         - Tipo: {property_details.get('tipo', 'N/A')}
+#         - Descripción: {property_details.get('description', 'N/A')}
+#         - Dirección: {property_details.get('direccion', 'N/A')}
+#         - Antigüedad: {property_details.get('antiguedad', 'N/A')}
+#         - Amenities: {property_details.get('amenities', 'N/A')}
+#         - Cochera: {property_details.get('cochera', 'N/A')}
+#         - Balcón: {property_details.get('balcon', 'N/A')}
+#         - Aire acondicionado: {property_details.get('aire_acondicionado', 'N/A')}
+#         - Expensas: {property_details.get('expensas', 'N/A')}
+#         - Estado: {property_details.get('estado', 'N/A')}
+#         """
+                
+#                 prompt = f"""
+#         ERES UN ASISTENTE INMOBILIARIO. El usuario está preguntando específicamente sobre ESTA propiedad:
+
+#         {detalles_propiedad}
+
+#         PREGUNTA DEL USUARIO: "{user_text}"
+
+#         INSTRUCCIONES ESTRICTAS:
+#         1. Responde EXCLUSIVAMENTE sobre esta propiedad específica
+#         2. Proporciona TODOS los detalles disponibles listados arriba
+#         3. NO menciones otras propiedades
+#         4. NO hagas preguntas adicionales al usuario
+#         5. Si faltan datos, menciona "No disponible" para ese campo
+#         6. {style_hint}
+
+#         RESPONDE DIRECTAMENTE CON TODOS LOS DETALLES DE ESTA PROPIEDAD:
+#         """
+#                 print("🧠 Prompt ESPECÍFICO de seguimiento enviado a Gemini")
+            
+#             else:
+#                 # Si no hay property_details pero hay contexto, usar prompt normal
+#                 prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
+#                 print("🧠 Prompt normal enviado a Gemini")
+
+#         # 👇 SI NO ES SEGUIMIENTO, USAR PROMPT NORMAL
+#         else:
+#             prompt = build_prompt(user_text, results, filters, channel, style_hint + "\n" + contexto_dinamico + "\n" + contexto_historial, property_details)
+#             print("🧠 Prompt normal enviado a Gemini (no es seguimiento)")
+            
+#         metrics.increment_gemini_calls()
+#         answer = call_gemini_with_rotation(prompt)
+        
+#         response_time = time.time() - start_time
+#         log_conversation(user_text, answer, channel, response_time, search_performed, len(results) if results else 0)
+#         metrics.increment_success()
+        
+#         return ChatResponse(
+#             response=answer,
+#             results_count=len(results) if results else None,
+#             search_performed=search_performed,
+#             # 👇 AGREGAR PROPIEDADES A LA RESPUESTA
+#             propiedades=results if results else (contexto_anterior.get('resultados') if contexto_anterior else None)
+#         )
+    
+#     except HTTPException:
+#         metrics.increment_failures()
+#         raise
+#     except Exception as e:
+#         metrics.increment_failures()
+#         # 🔥 MANEJO DE ERRORES MÁS LIMPIO
+#         error_type = type(e).__name__
+#         print(f"❌ ERROR en endpoint /chat: {error_type}: {str(e)}")
+        
+#         # Respuesta amigable al usuario
+#         error_message = "⚠️ Ocurrió un error procesando tu consulta. Por favor, intentá nuevamente en unos momentos."
+        
+#         return ChatResponse(
+#             response=error_message,
+#             search_performed=False,
+#             propiedades=None
+#         )
         
         
 @app.get("/metrics")
