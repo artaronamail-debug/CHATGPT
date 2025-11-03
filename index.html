@@ -547,18 +547,50 @@
     <script>
         
         
-    const API_URL = "https://dante-propiedades-backend.onrender.com/chat";
 
 // 🔥 FUNCIÓN TEMPORAL - Arreglar error aplicarFiltros
+const API_URL = "https://dante-propiedades-backend.onrender.com/chat";
+
+// 🔥 FUNCIÓN COMPLETA - Arreglar error aplicarFiltros
 function aplicarFiltros() {
-    console.log('🔍 Aplicar filtros - Función temporal');
+    console.log('🔍 Aplicando filtros...');
     
-    const filtros = obtenerFiltrosSeleccionados();
+    // Obtener valores simples de los filtros
+    const barrio = document.getElementById('barrio').value;
+    const tipo = document.getElementById('tipo').value;
+    const ambientes = document.getElementById('ambientes').value;
+    const precioMin = document.getElementById('precioMin').value;
+    const precioMax = document.getElementById('precioMax').value;
     
-    if (Object.keys(filtros).length === 0) {
-        alert('Seleccioná al menos un filtro para buscar.');
-        return;
+    // Construir mensaje simple
+    let mensaje = 'Buscar ';
+    if (tipo) mensaje += tipo + ' ';
+    if (barrio) mensaje += 'en ' + barrio + ' ';
+    if (ambientes) mensaje += ambientes + ' ambientes ';
+    if (precioMin || precioMax) {
+        mensaje += 'precio ';
+        if (precioMin) mensaje += 'desde ' + precioMin + ' ';
+        if (precioMax) mensaje += 'hasta ' + precioMax;
     }
+    
+    // Poner en input
+    const input = document.getElementById('userInput');
+    input.value = mensaje.trim();
+    
+    // Enfocar para que el usuario pueda enviar
+    input.focus();
+}
+
+// 🔥 ESTRATEGIA COMBINADA
+function aplicarEstrategiaCombinada(data) {
+    if (!data.propiedades || data.propiedades.length === 0) {
+        return {
+            ...data,
+            response: `🔍 **No encontré propiedades con esos criterios**\n\n💡 Probá con otras opciones.`
+        };
+    }
+    return data;
+}
 
     // Construir mensaje natural para el chat
     let mensajeNatural = 'Buscar propiedades';
@@ -584,7 +616,7 @@ function aplicarFiltros() {
             send();
         }
     }, 500);
-} // ← ¡IMPORTANTE: ESTA LLAVE CIERRA LA FUNCIÓN!
+ // ← ¡IMPORTANTE: ESTA LLAVE CIERRA LA FUNCIÓN!
     // Construir mensaje natural para el chat
     const descripcionFiltros = formatearFiltrosParaMensaje(filtros);
     let mensajeNatural = `Buscar propiedades para ${filtros.operacion || 'alquiler o venta'}`;
@@ -610,7 +642,7 @@ function aplicarFiltros() {
     
     // Enviar automáticamente
     send();
-}
+
 
 // 🔥 MODO DEMO - Datos de ejemplo para probar el frontend
 const datosDemo = {
@@ -674,57 +706,6 @@ const datosDemo = {
 };
 
 
-// 🔥 FUNCIÓN APLICAR FILTROS - Arreglar error
-function aplicarFiltros() {
-    console.log('🔍 Aplicar filtros - Función temporal');
-    
-    const operacion = document.getElementById('operacion').value;
-    const barrio = document.getElementById('barrio').value;
-    const tipo = document.getElementById('tipo').value;
-    const ambientes = document.getElementById('ambientes').value;
-    const precioMin = document.getElementById('precioMin').value;
-    const precioMax = document.getElementById('precioMax').value;
-
-    // Construir mensaje natural
-    let mensajeNatural = 'Buscar propiedades';
-    
-    if (operacion) mensajeNatural += ` para ${operacion}`;
-    if (barrio) mensajeNatural += ` en ${barrio}`;
-    if (tipo) mensajeNatural += `, tipo ${tipo}`;
-    if (ambientes) mensajeNatural += `, ${ambientes} ambientes`;
-    if (precioMin || precioMax) {
-        mensajeNatural += `, precio`;
-        if (precioMin) mensajeNatural += ` desde $${precioMin}`;
-        if (precioMax) mensajeNatural += ` hasta $${precioMax}`;
-    }
-    
-    // Poner en input y enviar
-    const input = document.getElementById('userInput');
-    input.value = mensajeNatural;
-    
-    // Enviar automáticamente
-    setTimeout(() => {
-        const sendBtn = document.getElementById('sendBtn');
-        if (sendBtn && !sendBtn.disabled) {
-            sendBtn.click();
-        }
-    }, 100);
-}
-
-// 🔥 ESTRATEGIA COMBINADA - Arreglar error
-function aplicarEstrategiaCombinada(data) {
-    if (!data.propiedades || data.propiedades.length === 0) {
-        return {
-            ...data,
-            response: `🔍 **No encontré propiedades con esos criterios exactos**\n\n` +
-                    `**💡 Te sugiero:**\n` +
-                    `• Probar con otros barrios o características\n` +
-                    `• Ajustar el presupuesto o cantidad de ambientes\n` +
-                    `• Explorar diferentes tipos de propiedad\n\n` +
-                    `**📞 Búsqueda personalizada**\n` +
-                    `Contame exactamente qué buscás y te ayudo a encontrar las mejores opciones disponibles.`
-        };
-    }
     
     const mensajeOriginal = data.response;
     const indicadoresNoExacto = ['aunque', 'podría ser', 'sin embargo', 'alternativa', 'excelente opción si'];
@@ -748,7 +729,7 @@ function aplicarEstrategiaCombinada(data) {
     }
     
     return data;
-}
+
          
         
         const chatBox = document.getElementById('chatBox');
