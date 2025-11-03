@@ -1377,6 +1377,11 @@ async def chat(request: ChatRequest):
         channel = request.channel.strip()
         filters_from_frontend = request.filters if request.filters else {}
 
+        # Inicializar variables principales
+        filters, results = {}, None
+        search_performed = False
+        property_details = None
+
         # 👇 AGREGAR DETECCIÓN DE CONTEXTO
         contexto_anterior = request.contexto_anterior if hasattr(request, 'contexto_anterior') else None
         es_seguimiento = request.es_seguimiento if hasattr(request, 'es_seguimiento') else False
@@ -1421,10 +1426,6 @@ async def chat(request: ChatRequest):
                         f"Tipos de propiedad: {', '.join(tipos_disponibles)}.\n"
                         f"Operaciones disponibles: {', '.join(operaciones_disponibles)}."
                     )
-
-                    filters, results = {}, None
-                    search_performed = False
-                    property_details = None
 
                     # 👇 AGREGAR DETECCIÓN MEJORADA DE SEGUIMIENTO
                     palabras_seguimiento_backend = [
