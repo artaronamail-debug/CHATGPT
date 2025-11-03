@@ -1792,11 +1792,16 @@ async def chat(request: ChatRequest):
         print(f"🔍 VERIFICANDO FILTROS: {filters}")
 
         # Verificar si el precio detectado es probablemente un error
+        
+        # 🔥🔥🔥 CORRECCIÓN GENÉRICA PARA FILTROS ERRÓNEOS
+        print(f"🔍 VERIFICANDO FILTROS: {filters}")
+
+# Verificar si el precio detectado es probablemente un error
         if filters.get('max_price') and filters.get('min_rooms'):
             mismo_numero = filters['max_price'] == filters['min_rooms']
             precio_muy_bajo = filters['max_price'] < 1000
-            texto_tiene_amb = any(palabra in user_text.lower() for palabra in [' amb', 'ambientes', 'dorm'])
-            texto_tiene_dolares = any(palabra in user_text.lower() for palabra in ['usd', 'dólar', 'dolar', 'u$s'])
+            texto_tiene_amb = any(palabra in text_lower for palabra in [' amb', 'ambientes', 'dorm'])
+            texto_tiene_dolares = any(palabra in text_lower for palabra in ['usd', 'dólar', 'dolar', 'u$s'])
             
             # Es error si: mismo número + precio bajo + contexto de ambientes + NO son dólares
             es_error = (mismo_numero and precio_muy_bajo and texto_tiene_amb and not texto_tiene_dolares)
@@ -1809,7 +1814,11 @@ async def chat(request: ChatRequest):
         if filters.get('min_rooms') and not filters.get('max_rooms'):
             filters['max_rooms'] = filters['min_rooms']
             print(f"🎯 Estableciendo max_rooms = min_rooms = {filters['min_rooms']}")
+        
 
+        
+        
+        
         # Si hay filtros, realizar búsqueda
         # 👇 EVITAR BÚSQUEDA SI HAY CONTEXTO DE SEGUIMIENTO
         # 🔥 AGREGAR ESTO ANTES del primer uso de es_seguimiento_final
@@ -1821,6 +1830,8 @@ async def chat(request: ChatRequest):
             es_seguimiento_final = es_seguimiento or es_seguimiento_backend
             print(f"🔍 DEBUG - es_seguimiento_final: {es_seguimiento_final}")
             
+
+
 
             if filters and not property_details and not (es_seguimiento_final and contexto_anterior):
                 print("🎯 Activando búsqueda con filtros combinados...")
