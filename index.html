@@ -649,34 +649,82 @@ const datosDemo = {
 };
 
 
-
-
-        
-   // 🔥 FUNCIÓN TEMPORAL - Arreglar error aplicarFiltros
+// 🔥 FUNCIÓN APLICAR FILTROS - Arreglar error
 function aplicarFiltros() {
     console.log('🔍 Aplicar filtros - Función temporal');
-    alert('Función de filtros en desarrollo. Por ahora usá el chat directamente.');
-}     
-        
-        
-// 🔥 MEJOR MANEJO DE RESPUESTAS CON CONTEXTO - ESTRATEGIA COMBINADA
+    
+    const operacion = document.getElementById('operacion').value;
+    const barrio = document.getElementById('barrio').value;
+    const tipo = document.getElementById('tipo').value;
+    const ambientes = document.getElementById('ambientes').value;
+    const precioMin = document.getElementById('precioMin').value;
+    const precioMax = document.getElementById('precioMax').value;
+
+    // Construir mensaje natural
+    let mensajeNatural = 'Buscar propiedades';
+    
+    if (operacion) mensajeNatural += ` para ${operacion}`;
+    if (barrio) mensajeNatural += ` en ${barrio}`;
+    if (tipo) mensajeNatural += `, tipo ${tipo}`;
+    if (ambientes) mensajeNatural += `, ${ambientes} ambientes`;
+    if (precioMin || precioMax) {
+        mensajeNatural += `, precio`;
+        if (precioMin) mensajeNatural += ` desde $${precioMin}`;
+        if (precioMax) mensajeNatural += ` hasta $${precioMax}`;
+    }
+    
+    // Poner en input y enviar
+    const input = document.getElementById('userInput');
+    input.value = mensajeNatural;
+    
+    // Enviar automáticamente
+    setTimeout(() => {
+        const sendBtn = document.getElementById('sendBtn');
+        if (sendBtn && !sendBtn.disabled) {
+            sendBtn.click();
+        }
+    }, 100);
+}
+
+// 🔥 ESTRATEGIA COMBINADA - Arreglar error
 function aplicarEstrategiaCombinada(data) {
     if (!data.propiedades || data.propiedades.length === 0) {
         return {
-                ...data,
-                response: `🔍 **No encontré propiedades con esos criterios exactos**\n\n` +
-                `**💡 Te sugiero:**\n` +
-                `• Probar con otros barrios o características\n` +
-                `• Ajustar el presupuesto o cantidad de ambientes\n` +
-                `• Explorar diferentes tipos de propiedad\n\n` +
-                `**📞 Búsqueda personalizada**\n` +
-                `Contame exactamente qué buscás y te ayudo a encontrar las mejores opciones disponibles.`
-              };
-}        
-        
-        
-        
-        
+            ...data,
+            response: `🔍 **No encontré propiedades con esos criterios exactos**\n\n` +
+                    `**💡 Te sugiero:**\n` +
+                    `• Probar con otros barrios o características\n` +
+                    `• Ajustar el presupuesto o cantidad de ambientes\n` +
+                    `• Explorar diferentes tipos de propiedad\n\n` +
+                    `**📞 Búsqueda personalizada**\n` +
+                    `Contame exactamente qué buscás y te ayudo a encontrar las mejores opciones disponibles.`
+        };
+    }
+    
+    const mensajeOriginal = data.response;
+    const indicadoresNoExacto = ['aunque', 'podría ser', 'sin embargo', 'alternativa', 'excelente opción si'];
+    const esCoincidenciaNoExacta = indicadoresNoExacto.some(indicator => 
+        mensajeOriginal.toLowerCase().includes(indicator)
+    );
+    
+    if (esCoincidenciaNoExacta) {
+        return {
+            ...data,
+            response: `🔍 **Búsqueda en nuestra base**\n\n` +
+                    `No encontré coincidencias exactas, pero te muestro alternativas disponibles:\n\n` +
+                    `${mensajeOriginal}\n\n` +
+                    `💡 **¿Por qué considerar estas opciones?**\n` +
+                    `• Ubicación privilegiada y valorización segura\n` +
+                    `• Espacio adaptable a tus necesidades\n` +
+                    `• Buen potencial de inversión o alquiler\n\n` +
+                    `📞 **¿Querés que busquemos algo más específico?**\n` +
+                    `Contactanos para acceso a propiedades no publicadas.`
+        };
+    }
+    
+    return data;
+}
+         
         
         const chatBox = document.getElementById('chatBox');
         const input = document.getElementById('userInput');
