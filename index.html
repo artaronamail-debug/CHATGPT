@@ -479,7 +479,7 @@
 
             <div class="filter-buttons">
                 <button class="btn btn-primary" id="aplicarFiltrosBtn">🔍 Aplicar Filtros</button>
-                <button class="btn btn-secondary" id="limpiarFiltrosBtn">🔄 Limpiar Filtros</button>
+                
             </div>
         </div>
 
@@ -492,7 +492,7 @@
                     <div class="status-dot"></div>
                     <span id="statusText">Conectado</span>
                 </div>
-                <button class="reset-chat" id="resetChatBtn">🔄 Nueva Consulta</button>
+                
             </div>
 
             <div class="chat-box" id="chatBox">
@@ -538,71 +538,9 @@
             const resetChatBtn = document.getElementById('resetChatBtn');
 
             // Estado de la aplicación
-            let conversacionActual = [];
             const API_URL = "https://dante-propiedades-backend.onrender.com/chat";
 
-            // Datos de demostración MEJORADOS
-            const datosDemo = {
-                "palermo": {
-                    response: "¡Hola! Encontré estas propiedades en Palermo:\n\n🏠 **Departamento en Palermo**\n• 2 ambientes | 45m² | $280,000\n• Con balcón y amenities\n\n🏠 **PH en Palermo**\n• 3 ambientes | 60m² | $350,000\n• Con patio y lavadero\n\n¿Te interesa alguna de estas opciones?",
-                    search_performed: true,
-                    results_count: 2
-                },
-                "recoleta": {
-                    response: "🔍 **Propiedades en Recoleta**\n\n🏠 **Departamento en Recoleta**\n• 3 ambientes | 95m² | $420,000\n• Ubicación premium\n• Excelente estado\n\n🏠 **Casa en Recoleta**\n• 4 ambientes | 120m² | $680,000\n• Jardín privado\n• Cocina amplia",
-                    search_performed: true,
-                    results_count: 2
-                },
-                "departamento": {
-                    response: "🏠 **Departamentos disponibles**\n\n• **Palermo**: 2 ambientes, $280,000\n• **Recoleta**: 3 ambientes, $420,000\n• **Belgrano**: 2 ambientes, $320,000\n\n¿Te interesa algún barrio en particular?",
-                    search_performed: true,
-                    results_count: 3
-                },
-                "alquiler": {
-                    response: "🔑 **Propiedades en alquiler**\n\n🏠 **Alquiler - Palermo**\n• 2 ambientes | $800/mes\n• Amueblado\n• Expensas: $150\n\n🏠 **Alquiler - Microcentro**\n• 1 ambiente | $650/mes\n• Incluye servicios\n• Céntrico",
-                    search_performed: true,
-                    results_count: 2
-                },
-                "casa": {
-                    response: "🏡 **Casas disponibles**\n\n• **Belgrano**: 3 ambientes, $550,000\n• **Caballito**: 2 ambientes, $380,000\n• **Almagro**: 3 ambientes, $420,000\n\n¿Buscás algo específico?",
-                    search_performed: true,
-                    results_count: 3
-                }
-            };
 
-            // Función MEJORADA para encontrar la respuesta demo
-            function obtenerRespuestaDemo(mensaje) {
-                const mensajeLower = mensaje.toLowerCase().trim();
-                
-                // Buscar coincidencias exactas primero
-                if (datosDemo[mensajeLower]) {
-                    return datosDemo[mensajeLower];
-                }
-                
-                // Buscar por palabras clave
-                const palabrasClave = Object.keys(datosDemo);
-                for (let clave of palabrasClave) {
-                    if (mensajeLower.includes(clave)) {
-                        return datosDemo[clave];
-                    }
-                }
-                
-                // Si no encuentra coincidencias, buscar por términos comunes
-                if (mensajeLower.includes('departamento') && mensajeLower.includes('palermo')) {
-                    return datosDemo["palermo"];
-                }
-                if (mensajeLower.includes('alquiler') && mensajeLower.includes('departamento')) {
-                    return datosDemo["alquiler"];
-                }
-                if (mensajeLower.includes('casa')) {
-                    return datosDemo["casa"];
-                }
-                if (mensajeLower.includes('departamento')) {
-                    return datosDemo["departamento"];
-                }
-                
-                return null;
-            }
 
             // Funciones del chat
             function addMessage(text, from = "bot") {
@@ -617,12 +555,6 @@
                 
                 chatBox.appendChild(messageDiv);
                 chatBox.scrollTop = chatBox.scrollHeight;
-                
-                conversacionActual.push({
-                    text: text,
-                    from: from,
-                    timestamp: new Date().toISOString()
-                });
             }
 
             function showTypingIndicator() {
@@ -703,19 +635,6 @@
                 document.getElementById('metrosMax').value = '';
             }
 
-            function resetearChat() {
-                if (confirm('¿Estás seguro de que querés empezar una nueva conversación? Se perderá el historial actual.')) {
-                    chatBox.innerHTML = '';
-                    conversacionActual = [];
-                    
-                    limpiarFiltros();
-                    
-                    setTimeout(() => {
-                        addMessage('¡Perfecto! Empezemos de nuevo. ¿Qué propiedad estás buscando?', 'bot');
-                    }, 300);
-                }
-            }
-
             async function enviarMensaje() {
                 let msg = userInput.value.trim();
                 
@@ -724,6 +643,7 @@
                     return;
                 }
 
+                chatBox.innerHTML = '';
                 addMessage(msg, 'user');
                 userInput.value = '';
                 sendBtn.disabled = true;
@@ -770,25 +690,13 @@
                     
                 } catch (error) {
                     console.error('❌ Error conectando con el backend:', error);
-                    
-                    // Fallback a modo demo si el backend no responde
-                    const respuestaDemo = obtenerRespuestaDemo(msg);
-                    if (respuestaDemo) {
-                        addMessage(respuestaDemo.response + '\n\n---\n**🔧 Nota: Usando datos de demostración**');
-                    } else {
-                        addMessage('🔍 **Búsqueda en modo demostración**\n\n' +
-                                  'El sistema está procesando tu consulta. Prueba con:\n\n' +
-                                  '• "departamento en palermo"\n' +
-                                  '• "alquiler en microcentro"\n' +
-                                  '• "casa con jardín"\n\n' +
-                                  '**💡 Sistema completo disponible pronto**');
-                    }
-                    
-                    statusText.textContent = 'Modo Demo';
+                    addMessage('Lo siento, ha ocurrido un error al conectar con el servidor. Por favor, intente de nuevo más tarde.');
+                    statusText.textContent = 'Error de Conexión';
                 } finally {
                     hideTypingIndicator();
                     sendBtn.disabled = false;
                     userInput.focus();
+                    limpiarFiltros();
                 }
             }
 
@@ -825,8 +733,7 @@
             });
 
             aplicarFiltrosBtn.addEventListener('click', aplicarFiltros);
-            limpiarFiltrosBtn.addEventListener('click', limpiarFiltros);
-            resetChatBtn.addEventListener('click', resetearChat);
+
 
             // Auto-focus en el input
             userInput.focus();
