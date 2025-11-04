@@ -16,6 +16,40 @@ from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
 from config import API_KEYS, ENDPOINT, WORKING_MODEL as MODEL
 
+# ✅ CONSTANTES
+BARRIO_KEYWORDS = [
+    'palermo', 'recoleta', 'belgrano', 'almagro', 'caballito',
+    'microcentro', 'balvanera', 'villa crespo', 'san telmo', 'boca',
+    'nuñez', 'monserrat', 'constitución', 'flores', 'parque chas',
+    'villa urquiza', 'boedo', 'villa luro', 'villa devoto', 'villa soldati',
+    'villa ramos mejía', 'liniers', 'mataderos', 'velez sarsfield', 'versalles',
+    'paternal', 'chacarita', 'agronomia', 'villa pueyrredón', 'saavedra',
+    'coghlan', 'belgrano r', 'belgrano c', 'nuñez', 'olivos', 'san isidro',
+    'vicente lopez', 'puerto madero', 'colegiales', 'soho', 'barrio norte'
+]
+
+OPERACION_KEYWORDS = {
+    'alquiler': 'alquiler',
+    'alquilar': 'alquiler', 
+    'renta': 'alquiler',
+    'venta': 'venta',
+    'comprar': 'venta',
+    'compra': 'venta',
+    'vender': 'venta'
+}
+
+TIPO_KEYWORDS = {
+    'departamento': 'departamento',
+    'depto': 'departamento',
+    'casa': 'casa',
+    'ph': 'ph',
+    'casaquinta': 'casaquinta',
+    'terreno': 'terreno',
+    'terrenos': 'terreno',
+    'lote': 'terreno',
+    'lotes': 'terreno'
+}
+
 
 # Después de las importaciones, agrega:
 print(f"🔍 API Keys cargadas: {API_KEYS}")
@@ -137,16 +171,11 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=1000, description="Mensaje del usuario")
     channel: str = Field(default="web", description="Canal de comunicación (web, whatsapp, etc.)")
     filters: Optional[Dict[str, Any]] = Field(default=None, description="Filtros aplicados desde el frontend")
-    # 👇 AGREGAR ESTOS CAMPOS NUEVOS
-    contexto_anterior: Optional[Dict[str, Any]] = Field(default=None, description="Contexto de la conversación anterior")
-    es_seguimiento: Optional[bool] = Field(default=False, description="Indica si es un mensaje de seguimiento")
 
 class ChatResponse(BaseModel):
     response: str
     results_count: Optional[int] = None
     search_performed: bool
-    # 👇 AGREGAR ESTE CAMPO NUEVO
-    propiedades: Optional[List[dict]] = None
 
 class PropertyResponse(BaseModel):
     id: int
@@ -828,141 +857,7 @@ def log_conversation(user_text, response_text, channel="web", response_time=0.0,
     except Exception as e:
         print(f"❌ Error en log: {e}")
 
-def detect_filters(text_lower: str) -> Dict[str, Any]:
-    """Detecta y extrae filtros del texto del usuario - VERSIÓN MEJORADA Y GENÉRICA"""
-    import re
-    filters = {}
-    
-    # Lista COMPLETA de barrios (expandible)
-    barrio_keywords = [
-        'palermo', 'recoleta', 'belgrano', 'almagro', 'caballito',
-        'microcentro', 'balvanera', 'villa crespo', 'san telmo', 'boca',
-        'nuñez', 'monserrat', 'constitución', 'flores', 'parque chas',
-        'villa urquiza', 'boedo', 'villa luro', 'villa devoto', 'villa soldati',
-        'villa ramos mejía', 'liniers', 'mataderos', 'velez sarsfield', 'versalles',
-        'paternal', 'chacarita', 'agronomia', 'villa pueyrredón', 'saavedra',
-        'coghlan', 'belgrano r', 'belgrano c', 'nuñez', 'olivos', 'san isidro',
-        'vicente lopez', 'puerto madero', 'colegiales', 'soho', 'barrio norte'
-    ]
-    
-    operacion_keywords = {
-        'alquiler': 'alquiler',
-        'alquilar': 'alquiler', 
-        'renta': 'alquiler',
-        'venta': 'venta',
-        'comprar': 'venta',
-        'compra': 'venta',
-        'vender': 'venta'
-    }
-    
-    tipo_keywords = {
-        'departamento': 'departamento',
-        'depto': 'departamento',
-        'casa': 'casa',
-        'ph': 'ph',
-        'casaquinta': 'casaquinta',
-        'terreno': 'terreno',
-        'terrenos': 'terreno',
-        'lote': 'terreno',
-        'lotes': 'terreno'
-    }
-    
-    # 🔥 DETECCIÓN MEJORADA DE BARRIO (MÁS FLEXIBLE)
-    barrio_detectado = None
-    
-    # 1. Detectar barrio por palabras clave exactas
-    for barrio in barrio_keywords:
-        if barrio in text_lower:
-            barrio_detectado = barrio
-            print(f"📍 Barrio detectado (keyword): {barrio_detectado}")
-            break
-    
-    # 2. Si no se detectó, buscar con patrones regex (más flexible)
-    if not barrio_detectado:
-        barrio_patterns = [
-            r"en ([a-zA-Záéíóúñ\s]+)",           # "en Palermo", "en Belgrano R"
-            r"barrio ([a-zA-Záéíóúñ\s]+)",       # "barrio Palermo"
-            r"zona ([a-zA-Záéíóúñ\s]+)",         # "zona Recoleta"  
-            r"de ([a-zA-Záéíóúñ\s]+)$",          # "departamento de Palermo"
-            r"el de ([a-zA-Záéíóúñ\s]+)",        # "el de Colegiales"
-            r"la de ([a-zA-Záéíóúñ\s]+)",        # "la de Villa Crespo"
-        ]
-        
-        for pattern in barrio_patterns:
-            match = re.search(pattern, text_lower)
-            if match:
-                potential_barrio = match.group(1).strip().lower()
-                # Verificar que sea un barrio válido y no otra palabra
-                if (potential_barrio in barrio_keywords and 
-                    potential_barrio not in operacion_keywords and
-                    potential_barrio not in tipo_keywords):
-                    barrio_detectado = potential_barrio
-                    print(f"📍 Barrio detectado (regex): {barrio_detectado}")
-                    break
-    
-    if barrio_detectado:
-        filters["neighborhood"] = barrio_detectado
-    
-    # 🔥 DETECCIÓN MEJORADA DE TIPO
-    for keyword, tipo in tipo_keywords.items():
-        if keyword in text_lower:
-            filters["tipo"] = tipo
-            print(f"🏠 Tipo detectado: {filters['tipo']}")
-            break
-    
-    # 🔥 DETECCIÓN MEJORADA DE OPERACIÓN
-    for keyword, operacion in operacion_keywords.items():
-        if keyword in text_lower:
-            filters["operacion"] = operacion
-            print(f"🏢 Operación detectada: {filters['operacion']}")
-            break
-    
-    # 🔥 DETECCIÓN GENÉRICA DE PRECIO
-    precio_patterns = [
-        r"hasta \$?\s*([0-9\.]+)",           # "hasta $280000"
-        r"máximo \$?\s*([0-9\.]+)",          # "máximo 280000"
-        r"precio.*?\$?\s*([0-9\.]+)",        # "precio 280000"
-        r"menos de \$?\s*([0-9\.]+)",        # "menos de 280000"
-        r"\$?\s*([0-9\.]+)\s*pesos",         # "280000 pesos"
-        r"de \$?\s*([0-9\.]+)",              # "de $280000"
-        r"valor.*?\$?\s*([0-9\.]+)",         # "valor 280000"
-    ]
-    
-    for pattern in precio_patterns:
-        match = re.search(pattern, text_lower)
-        if match:
-            try:
-                precio = int(match.group(1).replace('.', ''))
-                filters["max_price"] = precio
-                print(f"💰 Precio máximo detectado: ${precio}")
-                break
-            except ValueError:
-                continue
-    
-    # Precio mínimo
-    min_price_match = re.search(r"desde \$?\s*([0-9\.]+)", text_lower)
-    if min_price_match:
-        try:
-            min_price = int(min_price_match.group(1).replace('.', ''))
-            filters["min_price"] = min_price
-            print(f"💰 Precio mínimo detectado: ${min_price}")
-        except ValueError:
-            pass
-    
-    # Ambientes
-    rooms_match = re.search(r"(\d+)\s*amb", text_lower)
-    if rooms_match:
-        filters["min_rooms"] = int(rooms_match.group(1))
-        print(f"🚪 Ambientes detectados: {filters['min_rooms']}")
-    
-    # Metros cuadrados
-    sqm_match = re.search(r"(\d+)\s*m2", text_lower) or re.search(r"(\d+)\s*metros", text_lower)
-    if sqm_match:
-        filters["min_sqm"] = int(sqm_match.group(1))
-        print(f"📏 Metros cuadrados detectados: {filters['min_sqm']}")
 
-    print(f"🎯 Filtros finales detectados: {filters}")
-    return filters
 
 
 
@@ -1106,9 +1001,7 @@ async def chat(request: ChatRequest):
         channel = request.channel.strip()
         filters_from_frontend = request.filters if request.filters else {}
 
-        # 👇 AGREGAR DETECCIÓN DE CONTEXTO
-        contexto_anterior = request.contexto_anterior if hasattr(request, 'contexto_anterior') else None
-        es_seguimiento = request.es_seguimiento if hasattr(request, 'es_seguimiento') else False
+
 
         if not user_text:
             raise HTTPException(status_code=400, detail="El mensaje no puede estar vacío")
