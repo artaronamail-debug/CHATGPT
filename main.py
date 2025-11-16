@@ -1002,6 +1002,27 @@ def root():
         "uso": "Enviar mensaje como JSON: { message: '...', channel: 'web', filters: {...} }",
         "documentación": "/docs"
     }
+import os
+from fastapi.responses import JSONResponse
+
+@app.get("/diagnostico")
+def diagnostico():
+    claves = {
+        "KEY_GEMINI": os.environ.get("KEY_GEMINI"),
+        "GOOGLE_API_KEY": os.environ.get("GOOGLE_API_KEY"),
+        "ENV": os.environ.get("RAILWAY_ENVIRONMENT", "local")
+    }
+
+    archivos = os.listdir(".")
+    estado = {
+        "status": "Diagnóstico activo",
+        "claves_detectadas": {k: "✅" if v else "❌" for k, v in claves.items()},
+        "archivos_en_directorio": archivos,
+        "documentación": "/docs"
+    }
+
+    return JSONResponse(content=estado)
+
 
 # Diagnóstico automático al importar
 def diagnosticar_problemas():
