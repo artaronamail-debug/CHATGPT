@@ -1617,7 +1617,7 @@ if __name__ == "__main__":
     diagnosticar_problemas()
     
     port = int(os.environ.get("PORT") or 8000)
-    uvicorn.run(app, host="0.0.0.0", port=port, reload=False)
+    uvicorn.run(app, host="0.0.0.0", port=port)
     print(f"🎯 Servidor iniciando en puerto: {port}")
     
    
