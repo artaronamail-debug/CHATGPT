@@ -1,5 +1,4 @@
-﻿
-FROM python:3.10-slim
+﻿FROM python:3.10-slim
 
 WORKDIR /app
 COPY . /app
@@ -7,4 +6,4 @@ COPY . /app
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8000
-ENTRYPOINT ["bash", "entrypoint.sh"]
+CMD ["python", "main.py"]
