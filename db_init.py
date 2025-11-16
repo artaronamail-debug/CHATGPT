@@ -25,7 +25,16 @@ CREATE TABLE IF NOT EXISTS properties (
 )
 ''')
 
-cur.execute('DELETE FROM properties')
+cur.execute('SELECT COUNT(*) FROM properties')
+if cur.fetchone()[0] == 0:
+    for p in props:
+        cur.execute('INSERT INTO properties (title, neighborhood, price, rooms, sqm, description) VALUES (?, ?, ?, ?, ?, ?)',
+                    (p['title'], p['neighborhood'], p['price'], p['rooms'], p['sqm'], p['description']))
+    print('✅ Datos cargados en la base')
+else:
+    print('⚠️ La base ya tiene datos, no se recargó')
+
+
 for p in props:
     cur.execute('INSERT INTO properties (title, neighborhood, price, rooms, sqm, description) VALUES (?, ?, ?, ?, ?, ?)',
                 (p['title'], p['neighborhood'], p['price'], p['rooms'], p['sqm'], p['description']))
