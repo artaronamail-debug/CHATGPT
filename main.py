@@ -1606,18 +1606,18 @@ def custom_openapi():
 app.openapi = custom_openapi
 
 # ✅ INICIO
-if __name__ == "__main__":
-    import uvicorn
+# if __name__ == "__main__":
+#     import uvicorn
     
-    print("🚀 INICIANDO EN MODO PRODUCCIÓN/RENDER")
-    print(f"🔍 Directorio: {os.getcwd()}")
-    print(f"🔍 Archivos: {os.listdir('.')}")
+#     print("🚀 INICIANDO EN MODO PRODUCCIÓN/RENDER")
+#     print(f"🔍 Directorio: {os.getcwd()}")
+#     print(f"🔍 Archivos: {os.listdir('.')}")
     
-    # Diagnóstico completo
-    diagnosticar_problemas()
+#     # Diagnóstico completo
+#     diagnosticar_problemas()
     
-    port = int(os.environ.get("PORT") or 8000)
-    uvicorn.run(app, host="0.0.0.0", port=port)
-    print(f"🎯 Servidor iniciando en puerto: {port}")
+#     port = int(os.environ.get("PORT") or 8000)
+#     uvicorn.run(app, host="0.0.0.0", port=port)
+#     print(f"🎯 Servidor iniciando en puerto: {port}")
     
    
