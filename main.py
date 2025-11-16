@@ -990,6 +990,9 @@ def status():
         "search_queries": metrics.search_queries
     }
 
+
+app = FastAPI()
+
 @app.get("/")
 def root():
     return {
@@ -999,6 +1002,21 @@ def root():
         "uso": "Enviar mensaje como JSON: { message: '...', channel: 'web', filters: {...} }",
         "documentación": "/docs"
     }
+
+# Diagnóstico automático al importar
+def diagnosticar_problemas():
+    print("🔧 Diagnóstico automático activo")
+    print(f"📂 Archivos: {os.listdir('.')}")
+    print(f"📁 Directorio: {os.getcwd()}")
+
+diagnosticar_problemas()
+
+
+@app.get("/ping")
+def ping():
+    return {"status": "ok"}
+
+
 
 @app.get("/logs")
 def get_logs(limit: int = 10, channel: Optional[str] = None):
