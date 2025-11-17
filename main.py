@@ -242,6 +242,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 # ✅ CONFIGURACIONES
 DB_PATH = os.path.join(os.path.dirname(__file__), "propiedades.db")
 LOG_PATH = os.path.join(os.path.dirname(__file__), "conversaciones.db")
@@ -1038,13 +1047,23 @@ def status():
     }
 @app.get("/")
 def root():
-    return {
-        "status": "Backend activo",
-        "endpoint": "/chat",
-        "método": "POST",
-        "uso": "Enviar mensaje como JSON: { message: '...', channel: 'web', filters: {...} }",
-        "documentación": "/docs"
-    }
+    return {"message": "✅ Gemini API está funcionando"}
+
+
+@app.get("/status")
+def status():
+    return {"status": "activo", "gemini_api": "OK"}  # ← ESTE DEBE EXISTIR
+
+
+@app.get("/properties")
+def get_properties(neighborhood: str = None, min_price: float = None):
+    # ... tu código de propiedades
+    
+    
+@app.post("/chat") 
+async def chat(request: ChatRequest):
+    
+    
 
 @app.get("/logs")
 def get_logs(limit: int = 10, channel: Optional[str] = None):
