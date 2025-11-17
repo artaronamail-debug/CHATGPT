@@ -7,7 +7,7 @@ import requests
 import time
 from functools import lru_cache
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Query, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
