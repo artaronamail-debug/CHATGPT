@@ -1122,6 +1122,8 @@ def get_properties(
         filters["max_sqm"] = max_sqm
     
     results = query_properties(filters)
+    
+    
     return {
         "count": len(results),
         "filters": filters,
