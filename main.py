@@ -61,6 +61,77 @@ print(f"   - Modelo: {MODEL}")
 print(f"   - API Keys disponibles: {len(API_KEYS)}")
 print(f"   - Endpoint: {ENDPOINT}")
 
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# ✅ AGREGAR ESTO AL PRINCIPIO - CORS MIDDLEWARE
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://artaronamail-debug.github.io",  # Tu frontend
+        "http://localhost:3000",                 # Desarrollo
+        "http://127.0.0.1:3000",                # Desarrollo alternativo
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],  # GET, POST, OPTIONS, etc.
+    allow_headers=["*"],  # Todos los headers
+)
+
+# ✅ También agrega el middleware UTF-8 si no lo tienes
+@app.middleware("http")
+async def add_utf8_charset(request, call_next):
+    response = await call_next(request)
+    if "application/json" in response.headers.get("content-type", ""):
+        response.headers["content-type"] = "application/json; charset=utf-8"
+    return response
+
+# ✅ TU ENDPOINT STATUS ACTUAL (ya lo tienes) 
+@app.get("/status")
+def status():
+    """Endpoint de estado del servicio - VERSIÓN CORREGIDA"""
+    # Test más simple y confiable
+    test_prompt = "OK"
+    try:
+        response = call_gemini_with_rotation(test_prompt)
+        # Verificar que Gemini responda algo (no necesariamente "OK" exacto)
+        if response and len(response.strip()) > 0:
+            gemini_status = "OK"
+        else:
+            gemini_status = "ERROR: Respuesta vacía"
+    except Exception as e:
+        gemini_status = f"ERROR: {str(e)}"
+    
+    return {
+        "status": "activo",
+        "gemini_api": gemini_status,
+        "uptime_seconds": metrics.get_uptime(),
+        "total_requests": metrics.requests_count,
+        "successful_requests": metrics.successful_requests,
+        "failed_requests": metrics.failed_requests,
+        "gemini_calls": metrics.gemini_calls,
+        "search_queries": metrics.search_queries
+    }
+
+# ... el resto de tus endpoints
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ✅ DIAGNÓSTICO INICIAL MEJORADO
 def diagnostico_inicial():
     """Diagnóstico completo del sistema al iniciar"""
@@ -242,14 +313,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 # ✅ CONFIGURACIONES
 DB_PATH = os.path.join(os.path.dirname(__file__), "propiedades.db")
@@ -257,13 +320,6 @@ LOG_PATH = os.path.join(os.path.dirname(__file__), "conversaciones.db")
 CACHE_DURATION = 300  # 5 minutos para cache
 
 # 🔧 CONFIGURAR CORS - AGREGA ESTO:
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # ⚠️ Permite TODOS los dominios (solo para desarrollo)
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # ✅ CACHE PARA CONSULTAS FRECUENTES
 query_cache = {}
@@ -1020,39 +1076,12 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
 
 
 # ✅ ENDPOINTS MEJORADOS
-@app.get("/status")
-def status():
-    """Endpoint de estado del servicio - VERSIÓN CORREGIDA"""
-    # Test más simple y confiable
-    test_prompt = "OK"
-    try:
-        response = call_gemini_with_rotation(test_prompt)
-        # Verificar que Gemini responda algo (no necesariamente "OK" exacto)
-        if response and len(response.strip()) > 0:
-            gemini_status = "OK"
-        else:
-            gemini_status = "ERROR: Respuesta vacía"
-    except Exception as e:
-        gemini_status = f"ERROR: {str(e)}"
-    
-    return {
-        "status": "activo",
-        "gemini_api": gemini_status,
-        "uptime_seconds": metrics.get_uptime(),
-        "total_requests": metrics.requests_count,
-        "successful_requests": metrics.successful_requests,
-        "failed_requests": metrics.failed_requests,
-        "gemini_calls": metrics.gemini_calls,
-        "search_queries": metrics.search_queries
-    }
+
+
 @app.get("/")
 def root():
     return {"message": "✅ Gemini API está funcionando"}
 
-
-@app.get("/status")
-def status():
-    return {"status": "activo", "gemini_api": "OK"}  # ← ESTE DEBE EXISTIR
 
 
 @app.get("/properties")
