@@ -1,18 +1,29 @@
 from fastapi import FastAPI
 import google.generativeai as genai
 import os
+import socket
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 
-# Configurar Gemini con variable de entorno
-API_KEY = os.getenv('GEMINI_API_KEY')
+# Configurar Gemini
+API_KEY = "AIzaSyAoC9RD4HPE7l5wY8RcnMHS7F1BeXj7ea8" 
 if API_KEY:
     genai.configure(api_key=API_KEY)
     model = genai.GenerativeModel('gemini-2.5-flash')
+    print("✅ Gemini configurado correctamente")
+else:
+    print("❌ API Key no encontrada")
 
 @app.get("/")
 async def root():
     return {"message": "✅ Gemini API está funcionando"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 @app.get("/chat")
 async def chat(prompt: str = "Hola"):
@@ -25,12 +36,22 @@ async def chat(prompt: str = "Hola"):
     except Exception as e:
         return {"error": str(e)}
 
-# Health check esencial para Render
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
+def find_available_port(start_port=8000, end_port=9000):
+    """Encuentra un puerto disponible automáticamente"""
+    for port in range(start_port, end_port):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('0.0.0.0', port))
+                return port
+        except OSError:
+            continue
+    return 8000  # Fallback
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 10000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    
+    # Encontrar puerto disponible automáticamente
+    available_port = find_available_port()
+    print(f"🚀 Iniciando servidor en puerto {available_port}")
+    
+    uvicorn.run(app, host="0.0.0.0", port=available_port)
