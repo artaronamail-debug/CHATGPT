@@ -1638,25 +1638,19 @@ def custom_openapi():
 
 app.openapi = custom_openapi
 
+import time
+print("🔄 Servidor iniciado - esperando requests...")
+time.sleep(10)  # Dar tiempo para que Render detecte que está vivo
+
+
 # ✅ INICIO
-if __name__ == "__main__":
-    import uvicorn
-    
-    print("🚀 INICIANDO EN MODO PRODUCCIÓN/RENDER")
-    print(f"🔍 Directorio: {os.getcwd()}")
-    print(f"🔍 Archivos: {os.listdir('.')}")
-    
-    # Diagnóstico completo
-    diagnosticar_problemas()
-    
-    port = int(os.environ.get("PORT", 8000))
-    print(f"🎯 Servidor iniciando en puerto: {port}")
-    
-    # En producción, reload=False
-    uvicorn.run(
-        "main:app", 
-        host="0.0.0.0", 
-        port=port, 
-        reload=False,  # ⚠️ IMPORTANTE: False en producción
-        access_log=True
-    )
+
+
+# if __name__ == "__main__":
+#     # Para Render - solo ejecutar uvicorn directamente
+#     import uvicorn
+#     import os
+#     port = int(os.environ.get("PORT", 8000))
+#     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+
+
