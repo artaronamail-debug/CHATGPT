@@ -213,11 +213,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # o ["https://tudominio.github.io"]
+    allow_origins=["https://artaronamail-debug.github.io"],  # o ["*"] para pruebas
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Cargar claves desde variable de entorno
+API_KEYS = os.getenv("GEMINI_API_KEYS", "").split(",")
+ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
+
+
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -985,24 +992,10 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
 # ✅ ENDPOINTS MEJORADOS
 @app.get("/status")
 def status():
-    """Endpoint de estado del servicio"""
-    test_prompt = "Respondé solo con OK"
-    try:
-        response = call_gemini_with_rotation(test_prompt)
-        gemini_status = "OK" if "OK" in response else "ERROR"
-    except Exception as e:
-        gemini_status = f"ERROR: {str(e)}"
-    
-    return {
-        "status": "activo",
-        "gemini_api": gemini_status,
-        "uptime_seconds": metrics.get_uptime(),
-        "total_requests": metrics.requests_count,
-        "successful_requests": metrics.successful_requests,
-        "failed_requests": metrics.failed_requests,
-        "gemini_calls": metrics.gemini_calls,
-        "search_queries": metrics.search_queries
-    }
+    return {"status": "ok"}
+
+
+
 
 
 app = FastAPI()
@@ -1020,22 +1013,38 @@ import os
 from fastapi.responses import JSONResponse
 
 @app.get("/diagnostico")
-def diagnostico():
-    claves = {
-        "KEY_GEMINI": os.environ.get("KEY_GEMINI"),
-        "GOOGLE_API_KEY": os.environ.get("GOOGLE_API_KEY"),
-        "ENV": os.environ.get("RAILWAY_ENVIRONMENT", "local")
-    }
+def diagnostico(clave: str = Query(..., min_length=10)):
+    headers = {"Content-Type": "application/json"}
+    modelos = [
+        "models/gemini-2.5-flash",
+        "models/gemini-2.5-pro",
+        "models/gemini-2.0-flash",
+        "models/gemini-2.0-flash-001",
+        "models/gemini-2.0-flash-lite-001",
+        "models/gemini-2.0-flash-lite",
+        "models/gemini-2.5-flash-lite",
+        "models/embedding-001",
+        "models/text-embedding-004"
+    ]
 
-    archivos = os.listdir(".")
-    estado = {
-        "status": "Diagnóstico activo",
-        "claves_detectadas": {k: "✅" if v else "❌" for k, v in claves.items()},
-        "archivos_en_directorio": archivos,
-        "documentación": "/docs"
-    }
+    disponibles = []
+    for modelo in modelos:
+        url = f"{ENDPOINT}/{modelo}:generateContent?key={clave}"
+        try:
+            r = requests.post(url, json={"contents": [{"parts": [{"text": "Hola"}]}]}, headers=headers, timeout=5)
+            if r.status_code == 200:
+                disponibles.append(modelo)
+        except Exception:
+            continue
 
-    return JSONResponse(content=estado)
+    return {
+        "valida": len(disponibles) > 0,
+        "modelos": disponibles,
+        "flash_disponible": any("flash" in m for m in disponibles),
+        "vision_disponible": any("vision" in m for m in disponibles)
+  }
+
+
 
 
 # Diagnóstico automático al importar
@@ -1613,7 +1622,8 @@ app.openapi = custom_openapi
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
+
 
     
    
