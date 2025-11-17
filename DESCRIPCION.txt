@@ -180,7 +180,7 @@ text
 https://artaronamail-debug.github.io/CHATGPT/
 Backend: Render.com
 text
-https://dante-propiedades-backend.onrender.com
+https://dante-chatbot-api-production.up.railway.app
 Configuración:
 Python 3.11 via Docker
 
