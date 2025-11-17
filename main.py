@@ -247,9 +247,11 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "propiedades.db")
 LOG_PATH = os.path.join(os.path.dirname(__file__), "conversaciones.db")
 CACHE_DURATION = 300  # 5 minutos para cache
 
+# 🔧 CONFIGURAR CORS - AGREGA ESTO:
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # ⚠️ Permite TODOS los dominios (solo para desarrollo)
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
