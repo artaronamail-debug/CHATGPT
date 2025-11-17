@@ -209,9 +209,12 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "propiedades.db")
 LOG_PATH = os.path.join(os.path.dirname(__file__), "conversaciones.db")
 CACHE_DURATION = 300  # 5 minutos para cache
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # o ["https://tudominio.github.io"]
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
