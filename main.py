@@ -7,7 +7,7 @@ import requests
 import time
 from functools import lru_cache
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Query, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
@@ -209,33 +209,12 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "propiedades.db")
 LOG_PATH = os.path.join(os.path.dirname(__file__), "conversaciones.db")
 CACHE_DURATION = 300  # 5 minutos para cache
 
-from fastapi.middleware.cors import CORSMiddleware
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://artaronamail-debug.github.io"],  # o ["*"] para pruebas
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Cargar claves desde variable de entorno
-API_KEYS = os.getenv("GEMINI_API_KEYS", "").split(",")
-ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
-
-
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # o especificá tu dominio
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-
 
 # ✅ CACHE PARA CONSULTAS FRECUENTES
 query_cache = {}
@@ -992,13 +971,24 @@ def detect_filters(text_lower: str) -> Dict[str, Any]:
 # ✅ ENDPOINTS MEJORADOS
 @app.get("/status")
 def status():
-    return {"status": "ok"}
-
-
-
-
-
-app = FastAPI()
+    """Endpoint de estado del servicio"""
+    test_prompt = "Respondé solo con OK"
+    try:
+        response = call_gemini_with_rotation(test_prompt)
+        gemini_status = "OK" if "OK" in response else "ERROR"
+    except Exception as e:
+        gemini_status = f"ERROR: {str(e)}"
+    
+    return {
+        "status": "activo",
+        "gemini_api": gemini_status,
+        "uptime_seconds": metrics.get_uptime(),
+        "total_requests": metrics.requests_count,
+        "successful_requests": metrics.successful_requests,
+        "failed_requests": metrics.failed_requests,
+        "gemini_calls": metrics.gemini_calls,
+        "search_queries": metrics.search_queries
+    }
 
 @app.get("/")
 def root():
@@ -1009,80 +999,6 @@ def root():
         "uso": "Enviar mensaje como JSON: { message: '...', channel: 'web', filters: {...} }",
         "documentación": "/docs"
     }
-import os
-from fastapi.responses import JSONResponse
-
-@app.get("/diagnostico")
-def diagnostico(clave: str = Query(..., min_length=10)):
-    headers = {"Content-Type": "application/json"}
-    modelos = [
-        "models/gemini-2.5-flash",
-        "models/gemini-2.5-pro",
-        "models/gemini-2.0-flash",
-        "models/gemini-2.0-flash-001",
-        "models/gemini-2.0-flash-lite-001",
-        "models/gemini-2.0-flash-lite",
-        "models/gemini-2.5-flash-lite",
-        "models/embedding-001",
-        "models/text-embedding-004"
-    ]
-
-    disponibles = []
-    for modelo in modelos:
-        url = f"{ENDPOINT}/{modelo}:generateContent?key={clave}"
-        try:
-            r = requests.post(url, json={"contents": [{"parts": [{"text": "Hola"}]}]}, headers=headers, timeout=5)
-            if r.status_code == 200:
-                disponibles.append(modelo)
-        except Exception:
-            continue
-
-    return {
-        "valida": len(disponibles) > 0,
-        "modelos": disponibles,
-        "flash_disponible": any("flash" in m for m in disponibles),
-        "vision_disponible": any("vision" in m for m in disponibles)
-  }
-
-
-
-
-# Diagnóstico automático al importar
-def diagnosticar_problemas():
-    print("🔧 Diagnóstico automático activo")
-    print(f"📂 Archivos: {os.listdir('.')}")
-    print(f"📁 Directorio: {os.getcwd()}")
-
-diagnosticar_problemas()
-
-from fastapi import FastAPI, Query
-import requests
-
-app = FastAPI()
-
-@app.get("/ping")
-def ping():
-    return {"status": "ok"}
-
-@app.get("/diagnostico")
-def diagnostico(clave: str = Query(..., min_length=10)):
-    url = f"https://generativelanguage.googleapis.com/v1/models?key={clave}"
-    try:
-        r = requests.get(url)
-        if r.status_code == 200:
-            modelos = [m["name"] for m in r.json().get("models", [])]
-            return {
-                "valida": True,
-                "modelos": modelos,
-                "flash_disponible": any("2.5-flash" in m for m in modelos),
-                "vision_disponible": any("vision" in m for m in modelos)
-            }
-        else:
-            error = r.json().get("error", {}).get("message", "Clave inválida")
-            return {"valida": False, "error": error}
-    except Exception as e:
-        return {"valida": False, "error": str(e)}
-
 
 @app.get("/logs")
 def get_logs(limit: int = 10, channel: Optional[str] = None):
@@ -1618,12 +1534,24 @@ def custom_openapi():
 app.openapi = custom_openapi
 
 # ✅ INICIO
-
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
-
-
     
-   
+    print("🚀 INICIANDO EN MODO PRODUCCIÓN/RENDER")
+    print(f"🔍 Directorio: {os.getcwd()}")
+    print(f"🔍 Archivos: {os.listdir('.')}")
+    
+    # Diagnóstico completo
+    diagnosticar_problemas()
+    
+    port = int(os.environ.get("PORT", 8000))
+    print(f"🎯 Servidor iniciando en puerto: {port}")
+    
+    # En producción, reload=False
+    uvicorn.run(
+        "main:app", 
+        host="0.0.0.0", 
+        port=port, 
+        reload=False,  # ⚠️ IMPORTANTE: False en producción
+        access_log=True
+    )

@@ -2,7 +2,7 @@
 
 const CONFIG = {
     // ⚠️ REEMPLAZA CON TU URL REAL DE RENDER
-    const API_URL = 'https://dante-chatbot-api-production.up.railway.app/chat';
+    API_URL: 'https://chatgpt-eio1.onrender.com/chat',
     
     // Configuración de la UI
     UI: {
